@@ -1,7 +1,0 @@
-# format NVM command
-1.all_namespace.4096
-2.per_namespace.4096
-3.lba_format.4096
-#4.protection_info
-#5.secure_erase
-#6.cryptographic_erase

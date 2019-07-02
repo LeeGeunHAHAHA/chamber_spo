@@ -1,8 +1,0 @@
-#!/bin/bash
-
-function config_2850GB()
-{
-  format 1
-}
-
-register_config "2850GB" config_2850GB

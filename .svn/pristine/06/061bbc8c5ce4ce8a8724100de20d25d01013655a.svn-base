@@ -1,3 +1,0 @@
-# identify namespace common capabilities
-rescan-ns
-nvme id-ns $FQA_DEVICE -n 0xFFFFFFFF|grep -v eui64 |grep -v nguid

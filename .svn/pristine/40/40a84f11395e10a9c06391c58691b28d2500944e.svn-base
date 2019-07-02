@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-
-export AMOUNT_SCALE=11
-
-./longrun_1hr+1hr $@

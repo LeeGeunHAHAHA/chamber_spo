@@ -1,8 +1,0 @@
-#controller=/dev/nvme0
-ioengine=spdk
-controller=${FQA_DEVICE}
-nsid=1
-iosize=4kb-128kb
-iodepth=64
-slba=uniform
-operation=read:45,write:45,dealloc:10

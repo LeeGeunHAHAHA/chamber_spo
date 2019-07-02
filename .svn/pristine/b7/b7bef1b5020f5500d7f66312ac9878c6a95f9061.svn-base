@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-
-make > /dev/null
-./outstanding_cmds
-make clean > /dev/null

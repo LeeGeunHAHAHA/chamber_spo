@@ -1,5 +1,0 @@
-# 4KB LBA
-01.single
-02.1MB
-03.256MB            # 4KB x 2^16
-04.map_seg_boundary
