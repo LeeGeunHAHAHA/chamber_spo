@@ -5,6 +5,7 @@ RED='\033[1;31m'
 NC='\033[0m'
 
 PORT=$1
+NEED_FORMAT=$2
 case $PORT in
 	1)
 		FQA_DEVICE=0000:03:00.0
@@ -70,7 +71,10 @@ enable_spdk
 
 run_config
 clean_journal
-format_4k
+
+if [[ $NEED_FORMAT -eq 1 ]]; then
+    format_4k
+fi
 
 #IOSIZE_WR=$NAMESPACE_BSZ
 IOSIZE_WR_MIN=4k
