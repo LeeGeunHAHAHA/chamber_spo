@@ -1,0 +1,17 @@
+# VCS and IDE
+.svn
+.idea
+
+# LOG
+*.log
+res/
+
+# DOCS
+*.pptx
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+*.pdf
+*.csv
