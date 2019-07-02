@@ -1,0 +1,24 @@
+#!nbio
+stop_on_error=true
+stop_on_miscompare=true
+compare=1
+ioengine=spdk
+#ioengine_param=sgl
+controller=0000:02:00.0
+nsid=1
+#journal_file=${JOURNAL_FILE}
+journal_shm=123
+
+iodepth=32
+operation=read:20,write:78,deallocate:2
+amount=time:20s
+lba_range=0%:100%
+iosize=128k
+slba=uniform
+
+unwr_read=value:1		# FADU
+#unwr_read=value:0		# intel
+
+#skip_ioengine_exit=1
+
+history=50000

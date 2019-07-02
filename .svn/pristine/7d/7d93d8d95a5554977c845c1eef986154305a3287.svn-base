@@ -1,0 +1,6 @@
+# firmware commit command
+# 1.replace               # commit action 000b
+# 2.replace_and_activate  # commit action 001b
+3.activate              # commit action 010b
+4.activate_wo_reset     # commit action 011b
+# 5.sanity_check

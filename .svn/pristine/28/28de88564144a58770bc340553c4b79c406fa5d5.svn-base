@@ -1,0 +1,236 @@
+#!/usr/bin/env bash
+
+source lib
+#!/usr/bin/env bash
+
+export RESOURCE_TYPE_VQ=0
+export RESOURCE_TYPE_VI=1
+export ACT_PRI_CTRL_ALLOC=1
+export ACT_SEC_CTRL_OFFLINE=7
+export ACT_SEC_CTRL_ASSIGN=8
+export ACT_SEC_CTRL_ONLINE=9
+
+function virtual_mgmt() {
+  ctlid=$1
+  rt=$2
+  act=$3
+  nr=$4
+  cdw10=$(((ctlid << 16)|(rt << 8)|(act)))
+  nvme admin-passthru $FQA_DEVICE --opcode=0x1c --cdw10=$cdw10 --cdw11=$nr
+}
+
+function flr() {
+  killall prim_proc 2&> /dev/null
+  setpci -s $FQA_DEVICE CAP_EXP+8.W=8000:8000
+  echo 1 > /sys/bus/pci/devices/$FQA_DEVICE/remove
+  echo 1 > /sys/bus/pci/rescan
+}
+
+function id_prim_ctrl_cap() {
+  nvme admin-passthru $FQA_DEVICE --opcode=0x6 --cdw10=0x14 -r -l 4096 -b | ./prim_cap_parse
+}
+
+function id_sec_ctrl_list() {
+  nvme admin-passthru $FQA_DEVICE --opcode=0x6 --cdw10=0x15 -r -l 4096 -b | ./sec_list_parse $1
+}
+
+
+# initialize
+virtual_mgmt 0 $RESOURCE_TYPE_VQ $ACT_PRI_CTRL_ALLOC 0
+NVMe command result:00000000
+virtual_mgmt 0 $RESOURCE_TYPE_VI $ACT_PRI_CTRL_ALLOC 0
+NVMe command result:00000000
+flr
+rescan-ns
+id_prim_ctrl_cap
+cntlid  : 0
+portid  : 0
+crt     : 0x3
+  [1:1] : 1   VI Resources are supported
+  [0:0] : 1   VQ Resources are supported
+vqfrt   : 125
+vqrfa   : 0
+vqrfap  : 0
+vqprt   : 2
+vqfrsm  : 125
+vqgran  : 1
+vifrt   : 126
+virfa   : 0
+virfap  : 0
+viprt   : 1
+vifrsm  : 126
+vigran  : 1
+nvme get-feature $FQA_DEVICE -f 7       # number of queueus
+get-feature:0x7 (Number of Queues), Current value:00000000
+lspci -vv -s $FQA_DEVICE | grep MSI-X   # number of interrupts
+	Capabilities: [b0] MSI-X: Enable- Count=1 Masked-
+
+# vq alloc
+for i in 1 2 4 8 16 32 64 125 126 127 128 256; do
+  echo "-------------------"
+  echo " alloc flex vq $i"
+  echo "-------------------"
+  virtual_mgmt 0 $RESOURCE_TYPE_VQ $ACT_PRI_CTRL_ALLOC $i
+  flr
+  rescan-ns
+  id_prim_ctrl_cap | grep vqrfap
+  nvme get-feature $FQA_DEVICE -f 7     # number of queueus
+done
+-------------------
+ alloc flex vq 1
+-------------------
+NVMe command result:00000001
+vqrfap  : 1
+get-feature:0x7 (Number of Queues), Current value:0x010001
+-------------------
+ alloc flex vq 2
+-------------------
+NVMe command result:00000002
+vqrfap  : 2
+get-feature:0x7 (Number of Queues), Current value:0x020002
+-------------------
+ alloc flex vq 4
+-------------------
+NVMe command result:00000004
+vqrfap  : 4
+get-feature:0x7 (Number of Queues), Current value:0x040004
+-------------------
+ alloc flex vq 8
+-------------------
+NVMe command result:00000008
+vqrfap  : 8
+get-feature:0x7 (Number of Queues), Current value:0x080008
+-------------------
+ alloc flex vq 16
+-------------------
+NVMe command result:00000010
+vqrfap  : 16
+get-feature:0x7 (Number of Queues), Current value:0x100010
+-------------------
+ alloc flex vq 32
+-------------------
+NVMe command result:00000020
+vqrfap  : 32
+get-feature:0x7 (Number of Queues), Current value:0x200020
+-------------------
+ alloc flex vq 64
+-------------------
+NVMe command result:00000040
+vqrfap  : 64
+get-feature:0x7 (Number of Queues), Current value:0x400040
+-------------------
+ alloc flex vq 125
+-------------------
+NVMe command result:0000007d
+vqrfap  : 125
+get-feature:0x7 (Number of Queues), Current value:0x7d007d
+-------------------
+ alloc flex vq 126
+-------------------
+command error: SC 22 SCT 1
+NVMe Status:Unknown(122) Command Result:00000000
+vqrfap  : 125
+get-feature:0x7 (Number of Queues), Current value:0x7d007d
+-------------------
+ alloc flex vq 127
+-------------------
+command error: SC 22 SCT 1
+NVMe Status:Unknown(122) Command Result:00000000
+vqrfap  : 125
+get-feature:0x7 (Number of Queues), Current value:0x7d007d
+-------------------
+ alloc flex vq 128
+-------------------
+command error: SC 22 SCT 1
+NVMe Status:Unknown(122) Command Result:00000000
+vqrfap  : 125
+get-feature:0x7 (Number of Queues), Current value:0x7d007d
+-------------------
+ alloc flex vq 256
+-------------------
+command error: SC 22 SCT 1
+NVMe Status:Unknown(122) Command Result:00000000
+vqrfap  : 125
+get-feature:0x7 (Number of Queues), Current value:0x7d007d
+
+# vi alloc
+for i in 1 2 4 8 16 32 64 126 127 128 256; do
+  echo "-------------------"
+  echo " alloc flex vi $i"
+  echo "-------------------"
+  virtual_mgmt 0 $RESOURCE_TYPE_VI $ACT_PRI_CTRL_ALLOC $i
+  flr
+  rescan-ns
+  id_prim_ctrl_cap | grep virfap
+  lspci -vv -s $FQA_DEVICE | grep MSI-X # number of interrupts
+done
+-------------------
+ alloc flex vi 1
+-------------------
+NVMe command result:00000001
+virfap  : 1
+	Capabilities: [b0] MSI-X: Enable- Count=2 Masked-
+-------------------
+ alloc flex vi 2
+-------------------
+NVMe command result:00000002
+virfap  : 2
+	Capabilities: [b0] MSI-X: Enable- Count=3 Masked-
+-------------------
+ alloc flex vi 4
+-------------------
+NVMe command result:00000004
+virfap  : 4
+	Capabilities: [b0] MSI-X: Enable- Count=5 Masked-
+-------------------
+ alloc flex vi 8
+-------------------
+NVMe command result:00000008
+virfap  : 8
+	Capabilities: [b0] MSI-X: Enable- Count=9 Masked-
+-------------------
+ alloc flex vi 16
+-------------------
+NVMe command result:00000010
+virfap  : 16
+	Capabilities: [b0] MSI-X: Enable- Count=17 Masked-
+-------------------
+ alloc flex vi 32
+-------------------
+NVMe command result:00000020
+virfap  : 32
+	Capabilities: [b0] MSI-X: Enable- Count=33 Masked-
+-------------------
+ alloc flex vi 64
+-------------------
+NVMe command result:00000040
+virfap  : 64
+	Capabilities: [b0] MSI-X: Enable- Count=65 Masked-
+-------------------
+ alloc flex vi 126
+-------------------
+NVMe command result:0000007e
+virfap  : 126
+	Capabilities: [b0] MSI-X: Enable- Count=127 Masked-
+-------------------
+ alloc flex vi 127
+-------------------
+command error: SC 22 SCT 1
+NVMe Status:Unknown(122) Command Result:00000000
+virfap  : 126
+	Capabilities: [b0] MSI-X: Enable- Count=127 Masked-
+-------------------
+ alloc flex vi 128
+-------------------
+command error: SC 22 SCT 1
+NVMe Status:Unknown(122) Command Result:00000000
+virfap  : 126
+	Capabilities: [b0] MSI-X: Enable- Count=127 Masked-
+-------------------
+ alloc flex vi 256
+-------------------
+command error: SC 22 SCT 1
+NVMe Status:Unknown(122) Command Result:00000000
+virfap  : 126
+	Capabilities: [b0] MSI-X: Enable- Count=127 Masked-
+

@@ -1,0 +1,60 @@
+#!/bin/bash
+# analyze test log and print summary formatted with confluence markup
+
+TEST_NO=1
+TEMP_THR_WARNING=70
+TEMP_THR_DANGER=80
+LOGDIR="$PWD/log"
+
+function analyze_log()
+{
+  IOLOG="$LOGDIR/iolog-$TEST_NO"
+  ERRORLOG="$LOGDIR/errorlog-$TEST_NO"
+  SMARTLOG="$LOGDIR/smartlog-$TEST_NO"
+  TEST_NO=$((TEST_NO+1))
+  if [ ! -f $IOLOG ]; then
+    return
+  fi
+  if [ ! -f $ERRORLOG ]; then
+    RESULT="*{color:blue}Pass{color}*"
+  else
+    RESULT="*{color:red}Fail{color}*"
+  fi
+  printf "|%s|%s|%s|%s|" "$1" "$2" "$3" "$RESULT"
+  tail -n 1 $IOLOG | sed -r 's/^.{2}//' | awk -F',' '{time=$1; rd_throughput=$2; rd_iops=$3; rd_latency_ns=$4; wr_throughput=$5; wr_iops=$6; wr_latency_ns=$7} END { printf("%'"'"'g|%'"'"'u|%'"'"'u|%'"'"'u|%'"'"'u|%'"'"'u|%'"'"'u|",time,rd_throughput/1024/1024,rd_iops,rd_latency_ns/1000,wr_throughput/1024/1024,wr_iops,wr_latency_ns/1000) }'
+  TEMP=`tail -n1 $SMARTLOG | awk -F ',' '{ print $3-273 }'`
+  if [ $TEMP -ge $TEMP_THR_DANGER ]; then
+    printf "%s" "{color:red}$TEMP{color}"
+  elif [ $TEMP -ge $TEMP_THR_WARNING ]; then
+    printf "%s" "{color:orange}$TEMP{color}"
+  else
+    printf "%s" "$TEMP"
+  fi
+  printf "|\n"
+}
+
+if [ -z "$LOGDIR" ]; then
+  echo "no test log found"
+  exit 0
+else
+  echo "test log: $LOGDIR"
+fi
+
+echo "||I/O Operation||Starting LBA||I/O Size||Result||Elapsed Time\\\\(sec)||Read\\\\Throughput\\\\(MB/s)||Read\\\\IOPs||Read\\\\Latency\\\\(us)||Write\\\\Throughput\\\\(MB/s)||Write\\\\IOPs||Write\\\\Latency\\\\(us)||Temp.\\\\(\`C)||"
+
+analyze_log "Read 20%, Write 80%" "Random(Uniform)" "4KB"
+analyze_log "Read 20%, Write 80%" "Random(Uniform)" "128KB"
+analyze_log "Read 20%, Write 80%" "Random(Uniform)" "1MB"
+analyze_log "Read 20%, Write 80%" "Random(Uniform)" "4KB-1MB"
+analyze_log "Read 20%, Write 80%" "Random(Zipf)" "4KB"
+analyze_log "Read 20%, Write 80%" "Random(Zipf)" "128KB"
+analyze_log "Read 20%, Write 80%" "Random(Zipf)" "1MB"
+analyze_log "Read 20%, Write 80%" "Random(Zipf)" "4KB-1MB"
+analyze_log "Read 80%, Write 20%" "Random(Uniform)" "4KB"
+analyze_log "Read 80%, Write 20%" "Random(Uniform)" "128KB"
+analyze_log "Read 80%, Write 20%" "Random(Uniform)" "1MB"
+analyze_log "Read 80%, Write 20%" "Random(Uniform)" "4KB-1MB"
+analyze_log "Read 80%, Write 20%" "Random(Zipf)" "4KB"
+analyze_log "Read 80%, Write 20%" "Random(Zipf)" "128KB"
+analyze_log "Read 80%, Write 20%" "Random(Zipf)" "1MB"
+analyze_log "Read 80%, Write 20%" "Random(Zipf)" "4KB-1MB"

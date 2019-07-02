@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+init
+
+# disable all asynchronous events
+nvme set-feature $FQA_DEVICE -f 11 -v 0
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+
+# clear ns-change notice
+nvme changed-ns-list-log $FQA_DEVICE > /dev/null
+
+# enable all asynchronous events
+nvme set-feature $FQA_DEVICE -f 11 -v 0xffff
+
+# raise namespace change notice, aerc will arrive
+nvme create-ns $FQA_DEVICE -s 0x100000 -c 0x100000
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+check_aerc
+
+# raise namespace change notice, aerc will be masked
+nvme create-ns $FQA_DEVICE -s 0x100000 -c 0x100000
+nvme attach-ns $FQA_DEVICE -n 2 -c $CTRL_ID
+check_aerc
+
+# clear ns-change notice
+nvme changed-ns-list-log $FQA_DEVICE
+
+# raise namespace change notice, aerc will arrive
+nvme create-ns $FQA_DEVICE -s 0x100000 -c 0x100000
+nvme attach-ns $FQA_DEVICE -n 3 -c $CTRL_ID
+check_aerc
+
+# clear ns-change notice
+nvme changed-ns-list-log $FQA_DEVICE
+
+# raise namespace change notice, aerc will arrive
+nvme delete-ns $FQA_DEVICE -n 2
+check_aerc
+
+# raise namespace change notice, aerc will be masked
+nvme delete-ns $FQA_DEVICE -n 1
+check_aerc
+
+# clear ns-change notice
+nvme changed-ns-list-log $FQA_DEVICE
+

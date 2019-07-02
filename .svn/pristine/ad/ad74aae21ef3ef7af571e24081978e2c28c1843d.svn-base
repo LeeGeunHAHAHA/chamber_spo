@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+source ../../../common > /dev/null 2>&1
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000 -f 3 -d 1 -m 0
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+nvme list-ns $FQA_DEVICE
+
+rescan-ns
+
+# write an lba
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 -p 0x8 -m 0xffff -a 0xabcd -r 0
+
+# read the lba
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 -y 8 | xxd -p -l 12
+
+# deallocate the lba
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 1 -ad
+
+# read the lba(should be ffffffff)
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 -y 8 | xxd -p -l 12

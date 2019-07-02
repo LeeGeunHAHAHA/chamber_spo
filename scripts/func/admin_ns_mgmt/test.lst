@@ -1,0 +1,17 @@
+01.create_namespace
+02.delete_namespace
+03.delete_all_namespace
+04.data_protection
+# 05.namespace_sharing
+06.thin_provision
+07.management_sanity_check
+08.fragmentation
+09.attach_namespace
+10.detach_namespace
+11.attachment_sanity_check
+12.multi_namespace_io
+# 13.multi_controller
+20.outstanding_cmds
+21.space_merge
+30.ctrl_reset
+#c_unit

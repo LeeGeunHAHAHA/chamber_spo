@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+init
+
+# enable all asynchronous events
+nvme set-feature $FQA_DEVICE -f 11 -v 0xffff
+
+# clear error status event
+nvme error-log $FQA_DEVICE > /dev/null
+check_aerc
+
+# namespace management command
+
+# insufficient nvm capacity error, aerc will arrive
+nvme create-ns $FQA_DEVICE -s 0x1000000000 -c 0x1000000000 -f 2
+check_aerc
+
+# insufficient nvm capacity error, aerc will be masked
+nvme create-ns $FQA_DEVICE -s 0x1000000000 -c 0x1000000000 -f 2
+check_aerc
+
+# clear error status event
+nvme error-log $FQA_DEVICE -e 1 | grep -v error_count | grep -v cmdid
+
+# insufficient nvm capacity error, aerc will arrive
+nvme create-ns $FQA_DEVICE -s 0x1000000000 -c 0x1000000000 -f 2
+check_aerc
+
+# clear error status event
+nvme error-log $FQA_DEVICE -e 1 | grep -v error_count | grep -v cmdid
+
+# doorbell register
+
+# write to invalid sq doorbell register
+./reg_access $FQA_DEVICE write 5000 1
+check_aerc
+nvme error-log $FQA_DEVICE > /dev/null
+
+# write to invalid cq doorbell register
+./reg_access $FQA_DEVICE write 5004 1
+check_aerc
+nvme error-log $FQA_DEVICE > /dev/null
+
+# invalid sq doorbell write value
+./reg_access $FQA_DEVICE write 4096 999999
+check_aerc
+nvme error-log $FQA_DEVICE > /dev/null
+
+# invalid cq doorbell write value
+./reg_access $FQA_DEVICE write 4096 999999
+check_aerc
+nvme error-log $FQA_DEVICE > /dev/null
+

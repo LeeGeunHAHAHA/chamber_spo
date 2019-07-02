@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+# initialize
+./initialize
+delete-ns: Success, deleted nsid:-1
+allocated nvm capacitiy is 0GB(0B)
+
+rescan-ns
+# create namespaces in the entire space
+for i in $(seq 1 $MAX_NS); do
+  nvme create-ns $FQA_DEVICE -s 0x4000 -c 0x4000 -f 0 -d 0 -m 0
+done
+create-ns: Success, created nsid:1
+create-ns: Success, created nsid:2
+create-ns: Success, created nsid:3
+create-ns: Success, created nsid:4
+create-ns: Success, created nsid:5
+create-ns: Success, created nsid:6
+create-ns: Success, created nsid:7
+create-ns: Success, created nsid:8
+create-ns: Success, created nsid:9
+create-ns: Success, created nsid:10
+create-ns: Success, created nsid:11
+create-ns: Success, created nsid:12
+create-ns: Success, created nsid:13
+create-ns: Success, created nsid:14
+create-ns: Success, created nsid:15
+create-ns: Success, created nsid:16
+create-ns: Success, created nsid:17
+create-ns: Success, created nsid:18
+create-ns: Success, created nsid:19
+create-ns: Success, created nsid:20
+create-ns: Success, created nsid:21
+create-ns: Success, created nsid:22
+create-ns: Success, created nsid:23
+create-ns: Success, created nsid:24
+create-ns: Success, created nsid:25
+create-ns: Success, created nsid:26
+create-ns: Success, created nsid:27
+create-ns: Success, created nsid:28
+create-ns: Success, created nsid:29
+create-ns: Success, created nsid:30
+create-ns: Success, created nsid:31
+create-ns: Success, created nsid:32
+
+# attach all namespaces to controller 0
+for i in $(seq 1 $MAX_NS); do
+  nvme attach-ns $FQA_DEVICE -n $i -c $CTRL_ID
+done
+attach-ns: Success, nsid:1
+attach-ns: Success, nsid:2
+attach-ns: Success, nsid:3
+attach-ns: Success, nsid:4
+attach-ns: Success, nsid:5
+attach-ns: Success, nsid:6
+attach-ns: Success, nsid:7
+attach-ns: Success, nsid:8
+attach-ns: Success, nsid:9
+attach-ns: Success, nsid:10
+attach-ns: Success, nsid:11
+attach-ns: Success, nsid:12
+attach-ns: Success, nsid:13
+attach-ns: Success, nsid:14
+attach-ns: Success, nsid:15
+attach-ns: Success, nsid:16
+attach-ns: Success, nsid:17
+attach-ns: Success, nsid:18
+attach-ns: Success, nsid:19
+attach-ns: Success, nsid:20
+attach-ns: Success, nsid:21
+attach-ns: Success, nsid:22
+attach-ns: Success, nsid:23
+attach-ns: Success, nsid:24
+attach-ns: Success, nsid:25
+attach-ns: Success, nsid:26
+attach-ns: Success, nsid:27
+attach-ns: Success, nsid:28
+attach-ns: Success, nsid:29
+attach-ns: Success, nsid:30
+attach-ns: Success, nsid:31
+attach-ns: Success, nsid:32
+
+rescan-ns
+
+./ctrl_reset_test.sh 2&> /dev/null
+
+rescan-ns
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+delete-ns: Success, deleted nsid:-1

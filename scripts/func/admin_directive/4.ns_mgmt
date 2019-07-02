@@ -1,0 +1,31 @@
+#!/bin/bash
+# ns_mgnt
+
+echo "[Delete]"
+for i in {1..8}; do
+	nvme write ${FQA_DEVICE}n$i -z 1 -T 1 -S 1 < cmd.txt
+	sleep 1
+	nvme dir-receive $FQA_DEVICE -n $i -D 1 -O 1 -H
+	nvme delete-ns $FQA_DEVICE -n $i
+	nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -m 0
+	nvme attach-ns $FQA_DEVICE -n $i -c 0
+	sleep 1
+	nvme ns-rescan $FQA_DEVICE
+done
+
+nvme ns-rescan $FQA_DEVICE
+
+echo "Namespace is recreated"
+for i in {1..8}; do
+	nvme dir-receive $FQA_DEVICE -n $i -D 1 -O 1 -H
+done
+
+echo "[Format]"
+for i in {1..8}; do
+	nvme write ${FQA_DEVICE}n$i -z 1 -T 1 -S 1 < cmd.txt
+	nvme dir-receive $FQA_DEVICE -n $i -D 1 -O 1 -H
+	nvme format $FQA_DEVICE -n $i
+	sleep 1
+	nvme dir-receive $FQA_DEVICE -n $i -D 1 -O 1 -H
+done
+

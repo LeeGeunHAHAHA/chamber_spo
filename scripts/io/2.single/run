@@ -1,0 +1,21 @@
+#!/bin/bash
+source ../common
+GROUP_TITLE="single operation test"
+PARAM_FILE=parameter
+TITLE='OPERATION=$OPERATION IOSIZE=$IOSIZE'
+SEED=1
+
+if [[ -n $STATIC_AMOUNT ]]; then
+	export AMOUNT=$STATIC_AMOUNT
+fi
+
+group_init $@
+
+run_config
+for ((IOSIZE=NAMESPACE_BSZ;IOSIZE<=MDTS;IOSIZE*=2))
+do
+  AMOUNT_SCALE=1 OPERATION="write" IOSIZE="$IOSIZE" SEED="$SEED" run_test
+  AMOUNT_SCALE=1 OPERATION="read" IOSIZE="$IOSIZE" SEED="$SEED" run_test
+  SEED=$((SEED+1))
+done
+

@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+# initiate controller reset
+rescan-ns
+
+# all entries are empty
+nvme error-log $FQA_DEVICE -e 1 | grep "error_count"
+
+# error
+nvme create-ns $FQA_DEVICE -s 0x1000000000 -c 0x1000000000
+
+check_aerc
+
+# 1 entry
+ERROR_COUNT_OLD=`nvme error-log $FQA_DEVICE -e 1 | grep "error_count" | awk '{ print $3 }'`
+
+# error
+nvme create-ns $FQA_DEVICE -s 0x1000000000 -c 0x1000000000
+
+check_aerc
+
+# 2 entries
+ERROR_COUNT_NEW=`nvme error-log $FQA_DEVICE -e 1 | grep "error_count" | awk '{ print $3 }'`
+
+if [[ $((ERROR_COUNT_OLD+1)) != $ERROR_COUNT_NEW ]]; then
+  echo "expected <$((ERROR_COUNT_OLD+1))>, but was <$ERROR_COUNT_NEW>"
+fi
+
+# initiate controller reset
+rescan-ns
+
+# all entries are empty
+nvme error-log $FQA_DEVICE -e 1 | grep "error_count"
+

@@ -1,0 +1,354 @@
+#!/bin/bash
+# ns_mgnt
+
+echo "[Delete]"
+[Delete]
+for i in {1..8}; do
+	nvme write ${FQA_DEVICE}n$i -z 1 -T 1 -S 1 < cmd.txt
+	sleep 1
+	nvme dir-receive $FQA_DEVICE -n $i -D 1 -O 1 -H
+	nvme delete-ns $FQA_DEVICE -n $i
+	nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -m 0
+	nvme attach-ns $FQA_DEVICE -n $i -c 0
+	sleep 1
+	nvme ns-rescan $FQA_DEVICE
+done
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x1, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+delete-ns: Success, deleted nsid:1
+create-ns: Success, created nsid:1
+attach-ns: Success, nsid:1
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x2, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+delete-ns: Success, deleted nsid:2
+create-ns: Success, created nsid:2
+attach-ns: Success, nsid:2
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x3, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+delete-ns: Success, deleted nsid:3
+create-ns: Success, created nsid:3
+attach-ns: Success, nsid:3
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x4, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+delete-ns: Success, deleted nsid:4
+create-ns: Success, created nsid:4
+attach-ns: Success, nsid:4
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x5, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+delete-ns: Success, deleted nsid:5
+create-ns: Success, created nsid:5
+attach-ns: Success, nsid:5
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x6, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+delete-ns: Success, deleted nsid:6
+create-ns: Success, created nsid:6
+attach-ns: Success, nsid:6
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x7, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+delete-ns: Success, deleted nsid:7
+create-ns: Success, created nsid:7
+attach-ns: Success, nsid:7
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x8, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+delete-ns: Success, deleted nsid:8
+create-ns: Success, created nsid:8
+attach-ns: Success, nsid:8
+
+nvme ns-rescan $FQA_DEVICE
+
+echo "Namespace is recreated"
+Namespace is recreated
+for i in {1..8}; do
+	nvme dir-receive $FQA_DEVICE -n $i -D 1 -O 1 -H
+done
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x1, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x2, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x3, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x4, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x5, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x6, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x7, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x8, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+
+echo "[Format]"
+[Format]
+for i in {1..8}; do
+	nvme write ${FQA_DEVICE}n$i -z 1 -T 1 -S 1 < cmd.txt
+	nvme dir-receive $FQA_DEVICE -n $i -D 1 -O 1 -H
+	nvme format $FQA_DEVICE -n $i
+	sleep 1
+	nvme dir-receive $FQA_DEVICE -n $i -D 1 -O 1 -H
+done
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x1, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Success formatting namespace:1
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x1, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x2, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Success formatting namespace:2
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x2, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x3, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Success formatting namespace:3
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x3, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x4, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Success formatting namespace:4
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x4, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x5, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Success formatting namespace:5
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x5, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x6, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Success formatting namespace:6
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x6, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x7, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Success formatting namespace:7
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x7, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Rounding data size to fit block count (512 bytes)
+write: Success
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x8, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 1
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+Success formatting namespace:8
+dir-receive: type 0x1, operation 0x1, spec 0, nsid 0x8, result 0 
+	Max Streams Limit                          (MSL): 8
+	NVM Subsystem Streams Available           (NSSA): 257
+	NVM Subsystem Streams Open                (NSSO): 0
+	Stream Write Size (in unit of LB size)     (SWS): 4096
+	Stream Granularity Size (in unit of SWS)   (SGS): 4096
+	Namespece Streams Allocated                (NSA): 0
+	Namespace Streams Open                     (NSO): 0
+

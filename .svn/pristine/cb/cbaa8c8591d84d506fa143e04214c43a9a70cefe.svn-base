@@ -1,0 +1,145 @@
+#!/bin/bash
+# This script need jq utility.
+# apt-get install jq
+
+source ../common
+export SEED=$SEED
+GROUP_TITLE="JESD219 Enterprise test"
+PARAM_FILE=parameter
+TITLE='OPERATION=$OPERATION SLBA=$SLBA IOSIZE=$IOSIZE'
+
+IOSIZE_MIN=64k
+IOSIZE_MAX=$MDTS
+
+#REPEAT_COUNT=100000
+SUPER_BLK_SIZE_MB=1536
+EC_EOL_CNT=7300
+
+PATH_FQA_TEST_SCRIPT=~/fqa/trunk/fqa_test_script
+
+
+function parse_ec_byte_table()
+{
+	ec_sum=0
+	ec_cnt=0
+	ec_min=65535
+	ec_max=0
+		
+	string=$(hexdump -v -e '/2 "0x%04X\n"' $1)
+	#echo $string
+	array=(${string//' '/ })
+	for i in "${array[@]}"
+	do
+		vu_read_buf[$i]=$(printf "0x%04X\n" $i)
+		ec_val=$((${vu_read_buf[$i]}))
+		if [ $ec_val -eq 65535 ]; then
+			continue
+		fi
+
+		if [ $ec_val -lt $ec_min ]; then
+			ec_min=$ec_val
+		fi
+
+		if [ $ec_val -gt $ec_max ]; then
+			ec_max=$ec_val
+		fi
+
+		let ec_sum=$ec_sum+$ec_val
+		let ec_cnt=$ec_cnt+1
+		#echo $ec_val
+	done
+		
+	ec_avg=`echo "$ec_sum $ec_cnt"|awk '{printf "%.2f", $1 / $2}'`
+	let ec_gap=$ec_max-$ec_min
+}
+
+function send_vu_cmd()
+{
+	VU_COMMON_OPCODE=0xC2
+	VU_SUB_OPCODE=0x80000301 #SPBLK_EC_COUNT
+	#DATA_LEN_BYTE=0x4000
+	DATA_LEN_BYTE=512
+	PARAM0=0x00
+	PARAM1=0X00
+	PARAM2=0X00
+	PARAM3=0X00
+	NDT=$[$DATA_LEN_BYTE/4]
+
+	SPBLK_EC_FILE=spblk_ec_$1.out
+
+	nvme io-passthru $FQA_DEVICE --opcode $VU_COMMON_OPCODE --namespace-id $NSID \
+	--cdw2=$VU_SUB_OPCODE --read --raw-binary --data-len=$DATA_LEN_BYTE --cdw10=$NDT \
+	--cdw12=$PARAM0 --cdw13=$PARAM1 --cdw14=$PARAM2 --cdw15=$PARAM3 > $SPBLK_EC_FILE
+
+	# Parse byte table
+	parse_ec_byte_table "$SPBLK_EC_FILE"
+	rm -rf "$SPBLK_EC_FILE"
+	echo "ec_sum: "$ec_sum "ec_avg: "$ec_avg "ec_min: "$ec_min "ec_max: "$ec_max "ec_gap: "$ec_gap
+}
+
+function get_smart_log()
+{
+    nvme smart-log $FQA_DEVICE --namespace-id $NSID -o json > smart.tmp
+    hwrite_mb=`jq ".data_units_written" smart.tmp`
+    device_temp=`jq ".temperature" smart.tmp`
+
+    rm -rf smart.tmp
+    #echo $hwrite_mb
+    #echo $device_temp
+}
+
+function start_host_written()
+{
+	start_wr_val=`nvme smart-log $FQA_DEVICE --namespace-id $NSID -o json | jq '.data_units_written'`
+
+	send_vu_cmd $1
+	start_ec_sum=$ec_sum
+
+	#echo $start_wr_val
+}
+
+function end_host_written()
+{
+	get_smart_log
+	end_wr_val=$hwrite_mb
+
+	send_vu_cmd $1
+	#let diff_ec_sum=$ec_sum-$start_ec_sum
+	diff_ec_sum=$ec_sum
+
+	# calc ec gap & waf
+	let host_written_mb=($end_wr_val-$start_wr_val)*512*1000/1024/1024
+	nand_written_mb=`echo "$diff_ec_sum $SUPER_BLK_SIZE_MB"|awk '{printf "%.2f", $1 * $2}'`
+	waf=`echo "$nand_written_mb $host_written_mb"|awk '{printf "%.2f", $1 / $2}'`
+
+	echo $1')' "TBW: "$host_written_mb"MB" "NAND_BW: "$nand_written_mb"MB" "WAF: "$waf "Temperature: "$device_temp | tee -a jesd219_test.log 
+}
+
+group_init $@
+run_config
+nvme format $FQA_DEVICE --namespace-id  $NSID
+start_host_written 0
+OPERATION=write SLBA=SEQ IOSIZE=$IOSIZE_MAX run_test
+
+#for ((repeat_cnt=1; repeat_cnt<=REPEAT_COUNT; repeat_cnt++))
+repeat_cnt=0
+while true
+do
+	OPERATION=read SLBA=SEQ IOSIZE=$IOSIZE_MAX run_test
+	OPERATION=write SLBA=jesd219 SEED=$repeat_cnt IOSIZE=$IOSIZE_MIN run_test
+	
+	$PATH_FQA_TEST_SCRIPT/send_current_status.sh "ec_sum: "$ec_sum "ec_avg: "$ec_avg "ec_min: "$ec_min "ec_max: "$ec_max "ec_gap: "$ec_gap
+	
+	end_host_written "$repeat_cnt"
+	if [ "$ec_max" -gt $EC_EOL_CNT ]; then
+		$PATH_FQA_TEST_SCRIPT/send_current_status.sh "Enduarance Test Pass" " / " "ec_sum: "$ec_sum "ec_avg: "$ec_avg "ec_min: "$ec_min "ec_max: "$ec_max "ec_gap: "$ec_gap
+		break
+	fi
+	echo "************** test process time : $repeat_cnt ***************"
+	let repeat_cnt=$repeat_cnt+1
+done
+
+OPERATION=read SLBA=SEQ IOSIZE=$IOSIZE_MAX run_test
+echo "************** test done ***************"
+
+

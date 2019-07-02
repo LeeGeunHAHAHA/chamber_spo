@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+rescan-ns
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+make
+
+NR_NS=128
+ID_CTRL=`nvme id-ctrl $FQA_DEVICE`
+TNVMCAP=`printf "%s\n" "$ID_CTRL" | grep 'tnvmcap' | awk '{ print $3 }'`
+
+for ((i=0;i<NR_NS;i++)); do
+  NCAP=$((TNVMCAP/512/(NR_NS-i)))
+  nvme create-ns $FQA_DEVICE -s $NCAP -c $NCAP > /dev/null
+  nvme attach-ns $FQA_DEVICE -c 0 -n $((i+1)) > /dev/null
+
+  ID_CTRL=`nvme id-ctrl $FQA_DEVICE`
+  UNVMCAP=`printf "%s\n" "$ID_CTRL" | grep 'unvmcap' | awk '{ print $3 }'`
+  TNVMCAP=$UNVMCAP
+done
+
+./identify
+
+make clean

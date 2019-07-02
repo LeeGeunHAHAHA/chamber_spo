@@ -1,0 +1,50 @@
+#!/bin/bash
+# Stream
+
+echo "[Stream receive - return parameters]"
+nvme dir-receive $FQA_DEVICE -n 0xFFFFFFFF -D 1 -O 1 -H
+nvme dir-receive $FQA_DEVICE -n 1 -D 1 -O 1 -H
+nvme dir-receive $FQA_DEVICE -n 128 -D 1 -O 1 -H
+ 
+echo "[Stream receive - allocate stream]"
+nvme dir-receive $FQA_DEVICE -n 1 -D 1 -O 3 -r 1
+nvme dir-receive $FQA_DEVICE -n 1 -D 1 -O 1 -H
+echo "invalid field in command(allocate stream resource to namespace that already allocated stream)"
+nvme dir-receive $FQA_DEVICE -n 1 -D 1 -O 3 -r 1
+
+nvme dir-receive $FQA_DEVICE -n 128 -D 1 -O 3 -r 300 -H
+nvme dir-receive $FQA_DEVICE -n 128 -D 1 -O 1 -H
+
+echo "allocation fail"
+nvme dir-receive $FQA_DEVICE -n 2 -D 1 -O 3 -r 1 -H 2
+
+echo "[Stream send - release stream resource]"
+nvme dir-send $FQA_DEVICE -n 1 -D 1 -O 2 -H
+nvme dir-send $FQA_DEVICE -n 128 -D 1 -O 2 -H
+echo "release stream resource from namespace that not allocated stream resource"
+nvme dir-send $FQA_DEVICE -n 2 -D 1 -O 2 -H
+
+echo "[Stream receive - get status]"
+echo "[Stream send - release stream identifier]"
+nvme write ${FQA_DEVICE}n1 -z 1 -T 1 -S 1 < cmd.txt
+nvme write ${FQA_DEVICE}n1 -z 1 -T 1 -S 2 < cmd.txt
+nvme write ${FQA_DEVICE}n1 -z 1 -T 1 -S 3 < cmd.txt
+nvme write ${FQA_DEVICE}n1 -z 1 -T 1 -S 4 < cmd.txt
+
+nvme dir-receive $FQA_DEVICE -n 1 -D 1 -O 3 -r 100 -H
+
+nvme write ${FQA_DEVICE}n1 -z 1 -T 1 -S 5 < cmd.txt
+nvme write ${FQA_DEVICE}n1 -z 1 -T 1 -S 6 < cmd.txt
+nvme write ${FQA_DEVICE}n1 -z 1 -T 1 -S 7 < cmd.txt
+nvme write ${FQA_DEVICE}n1 -z 1 -T 1 -S 8 < cmd.txt
+
+nvme dir-receive $FQA_DEVICE -n 1 -D 1 -O 1 -H
+nvme dir-receive $FQA_DEVICE -n 1 -D 1 -O 2 -H
+
+nvme dir-send $FQA_DEVICE -n 1 -D 1 -O 1 -S 1
+nvme dir-send $FQA_DEVICE -n 1 -D 1 -O 1 -S 5
+
+nvme dir-receive $FQA_DEVICE -n 1 -D 1 -O 1 -H
+nvme dir-receive $FQA_DEVICE -n 1 -D 1 -O 2 -H
+
+sleep 2

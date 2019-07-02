@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+# commands supported and effects command
+nvme id-ctrl $FQA_DEVICE -H | grep "Command Effect"
+  [1:1] : 0x1	Command Effects Log Page Supported
+
+nvme effects-log $FQA_DEVICE -H
+Admin Command Set
+ACS0     [Delete I/O Submission Queue     ] 00000001  CSUPP+  LBCC-  NCC-  NIC-  CCC-  No command restriction
+ACS1     [Create I/O Submission Queue     ] 00000001  CSUPP+  LBCC-  NCC-  NIC-  CCC-  No command restriction
+ACS2     [Get Log Page                    ] 00000001  CSUPP+  LBCC-  NCC-  NIC-  CCC-  No command restriction
+ACS4     [Delete I/O Completion Queue     ] 00000001  CSUPP+  LBCC-  NCC-  NIC-  CCC-  No command restriction
+ACS5     [Create I/O Completion Queue     ] 00000001  CSUPP+  LBCC-  NCC-  NIC-  CCC-  No command restriction
+ACS6     [Identify                        ] 00000001  CSUPP+  LBCC-  NCC-  NIC-  CCC-  No command restriction
+ACS8     [Abort                           ] 00000001  CSUPP+  LBCC-  NCC-  NIC-  CCC-  No command restriction
+ACS9     [Set Features                    ] 00000001  CSUPP+  LBCC-  NCC-  NIC-  CCC-  No command restriction
+ACS10    [Get Features                    ] 00000001  CSUPP+  LBCC-  NCC-  NIC-  CCC-  No command restriction
+ACS12    [Asynchronous Event Request      ] 00000001  CSUPP+  LBCC-  NCC-  NIC-  CCC-  No command restriction
+ACS13    [Namespace Management            ] 0001000f  CSUPP+  LBCC+  NCC+  NIC+  CCC-  No other command for same namespace
+ACS16    [Firmware Commit                 ] 00000011  CSUPP+  LBCC-  NCC-  NIC-  CCC+  No command restriction
+ACS17    [Firmware Image Download         ] 00000001  CSUPP+  LBCC-  NCC-  NIC-  CCC-  No command restriction
+ACS21    [Namespace Attachment            ] 0001000d  CSUPP+  LBCC-  NCC+  NIC+  CCC-  No other command for same namespace
+ACS128   [Format NVM                      ] 0001000f  CSUPP+  LBCC+  NCC+  NIC+  CCC-  No other command for same namespace
+ACS132   [Sanitize                        ] 00020003  CSUPP+  LBCC+  NCC-  NIC-  CCC-  No other command for any namespace
+
+NVM Command Set
+IOCS0    [Flush                           ] 00000001  CSUPP+  LBCC-  NCC-  NIC-  CCC-  No command restriction
+IOCS1    [Write                           ] 00000003  CSUPP+  LBCC+  NCC-  NIC-  CCC-  No command restriction
+IOCS2    [Read                            ] 00000001  CSUPP+  LBCC-  NCC-  NIC-  CCC-  No command restriction
+IOCS4    [Write Uncorrectable             ] 00000003  CSUPP+  LBCC+  NCC-  NIC-  CCC-  No command restriction
+IOCS8    [Write Zeroes                    ] 00000003  CSUPP+  LBCC+  NCC-  NIC-  CCC-  No command restriction
+IOCS9    [Dataset Management              ] 00000003  CSUPP+  LBCC+  NCC-  NIC-  CCC-  No command restriction

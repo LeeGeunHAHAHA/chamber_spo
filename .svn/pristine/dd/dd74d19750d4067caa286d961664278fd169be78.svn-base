@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000
+
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+nvme attach-ns $FQA_DEVICE -n 2 -c $CTRL_ID
+nvme attach-ns $FQA_DEVICE -n 3 -c $CTRL_ID
+nvme attach-ns $FQA_DEVICE -n 4 -c $CTRL_ID
+
+rescan-ns
+
+NGUID=`nvme ns-descs $FQA_DEVICE -n 1 | grep nguid | awk '{ print $3 }'`
+echo ${NGUID:14:2}
+NGUID=`nvme ns-descs $FQA_DEVICE -n 2 | grep nguid | awk '{ print $3 }'`
+echo ${NGUID:14:2}
+NGUID=`nvme ns-descs $FQA_DEVICE -n 3 | grep nguid | awk '{ print $3 }'`
+echo ${NGUID:14:2}
+NGUID=`nvme ns-descs $FQA_DEVICE -n 4 | grep nguid | awk '{ print $3 }'`
+echo ${NGUID:14:2}
+

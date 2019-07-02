@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+# 1. compaction in idle state
+
+# initialize
+./initialize
+delete-ns: Success, deleted nsid:-1
+allocated nvm capacitiy is 0GB(0B)
+
+# Namespace 1 [1/4]
+ID_CTRL=`nvme id-ctrl $FQA_DEVICE`
+TNVMCAP=`printf "%s\n" "$ID_CTRL" | grep 'tnvmcap' | awk '{ print $3 }'`
+NCAP1=$((TNVMCAP/4096/4))
+nvme create-ns $FQA_DEVICE -s $NCAP1 -c $NCAP1 -f 0
+create-ns: Success, created nsid:1
+nvme attach-ns $FQA_DEVICE -c $CTRL_ID -n 1
+attach-ns: Success, nsid:1
+
+# Namespace 2 [2/4]
+ID_CTRL=`nvme id-ctrl $FQA_DEVICE`
+UNVMCAP=`printf "%s\n" "$ID_CTRL" | grep 'unvmcap' | awk '{ print $3 }'`
+TNVMCAP=$UNVMCAP
+
+NCAP2=$((TNVMCAP/4096/3*2))
+nvme create-ns $FQA_DEVICE -s $NCAP2 -c $NCAP2 -f 0
+create-ns: Success, created nsid:2
+nvme attach-ns $FQA_DEVICE -c $CTRL_ID -n 2
+attach-ns: Success, nsid:2
+
+# Namespace 3 [1/4]
+ID_CTRL=`nvme id-ctrl $FQA_DEVICE`
+UNVMCAP=`printf "%s\n" "$ID_CTRL" | grep 'unvmcap' | awk '{ print $3 }'`
+TNVMCAP=$UNVMCAP
+
+NCAP3=$((TNVMCAP/4096))
+nvme create-ns $FQA_DEVICE -s $NCAP3 -c $NCAP3 -f 0
+create-ns: Success, created nsid:3
+nvme attach-ns $FQA_DEVICE -c $CTRL_ID -n 3
+attach-ns: Success, nsid:3
+
+nvme list-ns $FQA_DEVICE
+[   0]:0x1
+[   1]:0x2
+[   2]:0x3
+
+# delete namespaces
+nvme delete-ns $FQA_DEVICE -n 1
+delete-ns: Success, deleted nsid:1
+nvme delete-ns $FQA_DEVICE -n 3
+delete-ns: Success, deleted nsid:3
+
+nvme list-ns $FQA_DEVICE
+[   0]:0x2
+
+rescan-ns
+
+echo "abcd" | nvme write $FQA_DEVICE -n 2 -z 4
+Rounding data size to fit block count (4096 bytes)
+write: Success
+echo "wxyz" | nvme write $FQA_DEVICE -n 2 -z 4 -s $((NCAP2-1))
+Rounding data size to fit block count (4096 bytes)
+write: Success
+nvme read $FQA_DEVICE -n 2 -z 4
+Rounding data size to fit block count (4096 bytes)
+abcdread: Success
+nvme read $FQA_DEVICE -n 2 -z 4 -s $((NCAP2-1))
+Rounding data size to fit block count (4096 bytes)
+wxyzread: Success
+
+# map segment compaction
+nvme create-ns $FQA_DEVICE -s $((NCAP1+NCAP3)) -c $((NCAP1+NCAP3)) -f 0
+create-ns: Success, created nsid:1
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+attach-ns: Success, nsid:1
+nvme list-ns $FQA_DEVICE
+[   0]:0x1
+[   1]:0x2
+
+nvme read $FQA_DEVICE -n 2 -z 4
+Rounding data size to fit block count (4096 bytes)
+abcdread: Success
+nvme read $FQA_DEVICE -n 2 -z 4 -s $((NCAP2-1))
+Rounding data size to fit block count (4096 bytes)
+wxyzread: Success
+
+# 2. compaction while outstanding I/O
+
+# initialize
+./initialize
+delete-ns: Success, deleted nsid:-1
+allocated nvm capacitiy is 0GB(0B)
+
+# Namespace 1 [1/4]
+ID_CTRL=`nvme id-ctrl $FQA_DEVICE`
+TNVMCAP=`printf "%s\n" "$ID_CTRL" | grep 'tnvmcap' | awk '{ print $3 }'`
+NCAP1=$((TNVMCAP/4096/4))
+nvme create-ns $FQA_DEVICE -s $NCAP1 -c $NCAP1 -f 0
+create-ns: Success, created nsid:1
+nvme attach-ns $FQA_DEVICE -c $CTRL_ID -n 1
+attach-ns: Success, nsid:1
+
+# Namespace 2 [2/4]
+ID_CTRL=`nvme id-ctrl $FQA_DEVICE`
+UNVMCAP=`printf "%s\n" "$ID_CTRL" | grep 'unvmcap' | awk '{ print $3 }'`
+TNVMCAP=$UNVMCAP
+
+NCAP2=$((TNVMCAP/4096/3*2))
+nvme create-ns $FQA_DEVICE -s $NCAP2 -c $NCAP2 -f 0
+create-ns: Success, created nsid:2
+nvme attach-ns $FQA_DEVICE -c $CTRL_ID -n 2
+attach-ns: Success, nsid:2
+
+# Namespace 3 [1/4]
+ID_CTRL=`nvme id-ctrl $FQA_DEVICE`
+UNVMCAP=`printf "%s\n" "$ID_CTRL" | grep 'unvmcap' | awk '{ print $3 }'`
+TNVMCAP=$UNVMCAP
+
+NCAP3=$((TNVMCAP/4096))
+nvme create-ns $FQA_DEVICE -s $NCAP3 -c $NCAP3 -f 0
+create-ns: Success, created nsid:3
+nvme attach-ns $FQA_DEVICE -c $CTRL_ID -n 3
+attach-ns: Success, nsid:3
+
+nvme list-ns $FQA_DEVICE
+[   0]:0x1
+[   1]:0x2
+[   2]:0x3
+
+rescan-ns
+
+nbio -q defrag.param &
+sleep 10
+
+# delete namespaces
+nvme delete-ns $FQA_DEVICE -n 1
+delete-ns: Success, deleted nsid:1
+nvme delete-ns $FQA_DEVICE -n 3
+delete-ns: Success, deleted nsid:3
+
+# map segment compaction
+nvme create-ns $FQA_DEVICE -s $((NCAP1+NCAP3)) -c $((NCAP1+NCAP3)) -f 0
+create-ns: Success, created nsid:1
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+attach-ns: Success, nsid:1
+nvme list-ns $FQA_DEVICE
+[   0]:0x1
+[   1]:0x2
+
+wait
+echo $?
+0

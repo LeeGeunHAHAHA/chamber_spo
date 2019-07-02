@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+init
+
+# enable all asynchronous events
+nvme set-feature $FQA_DEVICE -f 11 -v 0xffff
+set-feature:0b (Async Event Configuration), value:0x00ffff
+
+# clear error status event
+nvme error-log $FQA_DEVICE > /dev/null
+check_aerc
+
+# namespace management command
+
+# insufficient nvm capacity error, aerc will arrive
+nvme create-ns $FQA_DEVICE -s 0x1000000000 -c 0x1000000000 -f 2
+command error: SC 15 SCT 1
+NVMe Status:NS_INSUFFICIENT_CAPACITY: Creating the namespace requires more free space than is currently available. The Command Specific Information field of the Error Information Log specifies the total amount of NVM capacity required to create the namespace in bytes(115)
+check_aerc
+Asynchronous Event Type: Error Status(0)
+Asynchronous Event Info: Transient Internal Error(4)
+
+# insufficient nvm capacity error, aerc will be masked
+nvme create-ns $FQA_DEVICE -s 0x1000000000 -c 0x1000000000 -f 2
+command error: SC 15 SCT 1
+NVMe Status:NS_INSUFFICIENT_CAPACITY: Creating the namespace requires more free space than is currently available. The Command Specific Information field of the Error Information Log specifies the total amount of NVM capacity required to create the namespace in bytes(115)
+check_aerc
+
+# clear error status event
+nvme error-log $FQA_DEVICE -e 1 | grep -v error_count | grep -v cmdid
+Error Log Entries for device:0000:01:00.0 entries:1
+.................
+ Entry[ 0]   
+.................
+sqid         : 0
+status_field : 0x422b(NS_INSUFFICIENT_CAPACITY: Creating the namespace requires more free space than is currently available. The Command Specific Information field of the Error Information Log specifies the total amount of NVM capacity required to create the namespace in bytes)
+parm_err_loc : 0xffff
+lba          : 0
+nsid         : 0
+vs           : 0
+cs           : 0x1000000000000
+.................
+
+# insufficient nvm capacity error, aerc will arrive
+nvme create-ns $FQA_DEVICE -s 0x1000000000 -c 0x1000000000 -f 2
+command error: SC 15 SCT 1
+NVMe Status:NS_INSUFFICIENT_CAPACITY: Creating the namespace requires more free space than is currently available. The Command Specific Information field of the Error Information Log specifies the total amount of NVM capacity required to create the namespace in bytes(115)
+check_aerc
+Asynchronous Event Type: Error Status(0)
+Asynchronous Event Info: Transient Internal Error(4)
+
+# clear error status event
+nvme error-log $FQA_DEVICE -e 1 | grep -v error_count | grep -v cmdid
+Error Log Entries for device:0000:01:00.0 entries:1
+.................
+ Entry[ 0]   
+.................
+sqid         : 0
+status_field : 0x422b(NS_INSUFFICIENT_CAPACITY: Creating the namespace requires more free space than is currently available. The Command Specific Information field of the Error Information Log specifies the total amount of NVM capacity required to create the namespace in bytes)
+parm_err_loc : 0xffff
+lba          : 0
+nsid         : 0
+vs           : 0
+cs           : 0x1000000000000
+.................
+
+# doorbell register
+
+# write to invalid sq doorbell register
+./reg_access $FQA_DEVICE write 5000 1
+check_aerc
+Asynchronous Event Type: Error Status(0)
+Asynchronous Event Info: Write to Invalid Doorbell Register(0)
+nvme error-log $FQA_DEVICE > /dev/null
+
+# write to invalid cq doorbell register
+./reg_access $FQA_DEVICE write 5004 1
+check_aerc
+Asynchronous Event Type: Error Status(0)
+Asynchronous Event Info: Write to Invalid Doorbell Register(0)
+nvme error-log $FQA_DEVICE > /dev/null
+
+# invalid sq doorbell write value
+./reg_access $FQA_DEVICE write 4096 999999
+check_aerc
+Asynchronous Event Type: Error Status(0)
+Asynchronous Event Info: Invalid Doorbell Register Write Value(1)
+nvme error-log $FQA_DEVICE > /dev/null
+
+# invalid cq doorbell write value
+./reg_access $FQA_DEVICE write 4096 999999
+check_aerc
+Asynchronous Event Type: Error Status(0)
+Asynchronous Event Info: Invalid Doorbell Register Write Value(1)
+nvme error-log $FQA_DEVICE > /dev/null
+

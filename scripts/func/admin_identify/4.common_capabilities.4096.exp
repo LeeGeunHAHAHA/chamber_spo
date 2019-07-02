@@ -1,0 +1,30 @@
+# identify namespace common capabilities
+rescan-ns
+nvme id-ns $FQA_DEVICE -n 0xFFFFFFFF|grep -v eui64 |grep -v nguid
+NVME Identify Namespace -1:
+nsze    : 0
+ncap    : 0
+nuse    : 0
+nsfeat  : 0xa
+nlbaf   : 2
+flbas   : 0
+mc      : 0x3
+dpc     : 0x1f
+dps     : 0
+nmic    : 0
+rescap  : 0
+fpi     : 0
+dlfeat  : 0
+nawun   : 0
+nawupf  : 0
+nacwu   : 0
+nabsn   : 0
+nabo    : 0
+nabspf  : 0
+noiob   : 0
+nvmcap  : 0
+nvmsetid: 0
+endgid  : 0
+lbaf  0 : ms:0   lbads:12 rp:0 (in use)
+lbaf  1 : ms:8   lbads:12 rp:0x1 
+lbaf  2 : ms:64  lbads:12 rp:0x2 

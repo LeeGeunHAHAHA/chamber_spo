@@ -1,0 +1,93 @@
+#!/bin/bash
+source ../common
+source ../parser_plp.sh
+GROUP_TITLE="Sudden POR Test - Type A"
+PATH_FQA_TEST_SCRIPT=~/fqa/trunk/fqa_test_script
+
+WAIT_POWER_OFF_DRAIN_SEC=1
+
+START_PWRCYC=$(get_power_cycles_count)
+START_UNSAFE=$(get_unsafe_shutdowns_count)
+
+# echo "Power Cycles 		: $START_PWRCYC"
+# echo "Unsafe Shutdowns 	: $START_UNSAFE"
+
+LOOP=$((RANDOM%=5))
+LOOP=$((LOOP + 1))
+
+MAX_MSEC=2000	# 2sec
+#MAX_MSEC=5000	# 5sec
+
+rm ./hex_log/plp_time_log_${FQA_DEVICE}
+
+
+mkfile_time=$(date "+%Y%m%d_%H%M%S")
+filename=res/output_${FQA_DEVICE}_${mkfile_time}.csv
+mkdir -p res || true
+ln -sf $filename ${LOG_FILE}
+echo "intr_ms, wait_pss0_ms, wait_pss1_ms, plp_ready_ms, dumpping_start_time, dumping_ms, dumpped_ms, event_ms" > ${LOG_FILE}
+
+for ((i=1;i<=$LOOP;i++))
+do
+	echo "*********************** [$i/$LOOP] ***********************"
+	$PATH_FQA_TEST_SCRIPT/send_current_status.sh "SPOR $i/$LOOP"
+
+	SLEEP_MSEC=$(echo "scale=2;$((RANDOM%=$MAX_MSEC))/1000" | bc)
+	echo "power off after $SLEEP_MSEC sec"
+
+	# power on
+	$POWERCTL_BIN ${POWERCTL_DEV} $POWERCTL_CMD_ON > /dev/null
+
+	sleep $SLEEP_MSEC
+
+	# power off
+  	$POWERCTL_BIN ${POWERCTL_DEV} $POWERCTL_CMD_OFF > /dev/null
+
+	#echo "power off drain - wait $WAIT_POWER_OFF_DRAIN_SEC sec"
+	sleep $WAIT_POWER_OFF_DRAIN_SEC
+
+	echo ""
+
+	cd log
+        FILE_LIST=(`ls -alt | grep $FQA_DEVICE | grep ^- | awk '{print $9}'`)
+        for ((num=300;num<${#FILE_LIST[*]};num++)); do
+                rm -rf ${FILE_LIST[num]}
+        done
+        cd ..
+done
+
+power_off
+power_on
+
+
+nvme_scan_cnt=0
+nvme_device=$(echo /dev/$(ls /sys/bus/pci/devices/${FQA_DEVICE}/nvme)n1)
+while [ ! -e "$nvme_device" ]
+do
+	let nvme_scan_cnt=${nvme_scan_cnt}+1
+	echo -ne "[${nvme_scan_cnt}] $nvme_device file not ready\r"
+	sleep 1s
+done
+send_vu_cmd_plp_time_info ${i}
+sleep 3
+
+
+enable_spdk
+
+END_PWRCYC=$(get_power_cycles_count)
+END_UNSAFE=$(get_unsafe_shutdowns_count)
+
+# echo "Power Cycles 		: $END_PWRCYC"
+# echo "Unsafe Shutdowns 	: $END_UNSAFE"
+
+DIFF_PWRCYC=$(($END_PWRCYC - $START_PWRCYC))
+DIFF_UNSAFE=$(($END_UNSAFE - $START_UNSAFE))
+
+echo "Power Cycles 		: $DIFF_PWRCYC"
+echo "Unsafe Shutdowns 	: $DIFF_UNSAFE"
+
+if [ $i -ge $LOOP ];then
+	$PATH_FQA_TEST_SCRIPT/send_current_status.sh "SPOR Test Pass [${i}cycle]"
+else
+	$PATH_FQA_TEST_SCRIPT/send_current_status.sh "SPOR Test Fail [${i}cycle]"
+fi

@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+source ../../common > /dev/null 2>&1
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+delete-ns: Success, deleted nsid:-1
+nvme create-ns $FQA_DEVICE -s 0x1000000 -c 0x1000000 -f $FLBAS_PROTECT_4096 -d 9 -m 0
+create-ns: Success, created nsid:1
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+attach-ns: Success, nsid:1
+nvme list-ns $FQA_DEVICE
+[   0]:0x1
+
+rescan-ns
+
+nvme write-zeroes $FQA_DEVICE -n 1 -s 1310712 -c 17 -p 8 -r 1310712 -a 0xfad0 -m 0xffff
+NVME Write Zeroes Success
+nvme read $FQA_DEVICE -n 1 -s 1310709 -c 31 -z 4 -y 256 | xxd -p -l 260
+Rounding data size to fit block count (131072 bytes)
+read: Success
+ffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000
+fad00013fff80000fad00013fff90000fad00013fffa0000fad00013fffb
+0000fad00013fffc0000fad00013fffd0000fad00013fffe0000fad00013
+ffff0000fad0001400000000fad0001400010000fad0001400020000fad0
+001400030000fad0001400040000fad0001400050000fad0001400060000
+fad0001400070000fad0001400080000fad000140009ffffffffffffffff
+ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+ffffffffffffffffffffffffffffffffffffffff
+nvme read $FQA_DEVICE -n 1 -s 1310728 -c 0 -z 4 -y 8 | xxd -p -l 12
+Rounding data size to fit block count (4096 bytes)
+read: Success
+000000000000fad000140008
+nvme read $FQA_DEVICE -n 1 -s 1310729 -c 0 -z 4 -y 8 | xxd -p -l 12
+Rounding data size to fit block count (4096 bytes)
+read: Success
+000000000000fad000140009
+

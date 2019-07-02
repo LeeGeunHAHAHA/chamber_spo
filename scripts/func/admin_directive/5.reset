@@ -1,0 +1,58 @@
+#!/bin/bash
+# reset
+
+echo "[Controller reset]"
+nvme dir-send $FQA_DEVICE -n 0xFFFFFFFF -D 0 -O 1 -T 1 -e 1 -H
+nvme reset $FQA_DEVICE
+sleep 2
+nvme dir-receive $FQA_DEVICE -n 1 -D 0 -O 1 -H
+nvme dir-receive $FQA_DEVICE -n 128 -D 0 -O 1 -H
+
+nvme dir-send $FQA_DEVICE -n 0xFFFFFFFF -D 0 -O 1 -T 1 -e 1 -H
+nvme write ${FQA_DEVICE}n1 -z 1 -T 1 -S 10 < cmd.txt
+nvme dir-receive $FQA_DEVICE -n 1 -D 1 -O 3 -r 8 -H
+for i in {1..8}; do
+	nvme write ${FQA_DEVICE}n${i} -z 1 -T 1 -S 1 < cmd.txt
+done
+
+for i in {1..8}; do
+	nvme dir-receive $FQA_DEVICE -n $i -D 1 -O 1 -H
+done
+
+nvme reset $FQA_DEVICE
+sleep 2
+
+for i in {1..8}; do
+	nvme dir-receive $FQA_DEVICE -n $i -D 1 -O 1 -H
+done
+
+:<<"END"
+echo "[NVM subsystem reset]"
+nvme dir-send $FQA_DEVICE -n 0xFFFFFFFF -D 0 -O 1 -T 1 -e 1 -H
+
+sleep 2
+./nssr.sh
+sleep 2
+
+nvme dir-receive $FQA_DEVICE -n 1 -D 0 -O 1 -H
+nvme dir-receive $FQA_DEVICE -n 128 -D 0 -O 1 -H
+
+nvme dir-send $FQA_DEVICE -n 0xFFFFFFFF -D 0 -O 1 -T 1 -e 1 -H
+nvme write ${FQA_DEVICE}n1 -z 1 -T 1 -S 10 < cmd.txt
+nvme dir-receive $FQA_DEVICE -n 1 -D 1 -O 3 -r 8 -H
+for i in {1..8}; do
+	nvme write ${FQA_DEVICE}n${i} -z 1 -T 1 -S 1 < cmd.txt
+done
+
+for i in {1..8}; do
+	nvme dir-receive $FQA_DEVICE -n $i -D 1 -O 1 -H
+done
+
+sleep 2
+./nssr.sh
+sleep 2
+
+for i in {1..8}; do
+	nvme dir-receive $FQA_DEVICE -n $i -D 1 -O 1 -H
+done
+END

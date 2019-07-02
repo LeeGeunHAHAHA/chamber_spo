@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+source ../../common > /dev/null 2>&1
+
+# initialize
+nvme delete-ns $FQA_DEVICE -n 0xffffffff
+delete-ns: Success, deleted nsid:-1
+nvme create-ns $FQA_DEVICE -s 0x100000 -c 0x100000 -f 0
+create-ns: Success, created nsid:1
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+attach-ns: Success, nsid:1
+
+nvme id-ns $FQA_DEVICE -n 1 | grep "in use"
+lbaf  0 : ms:0   lbads:9  rp:0x2 (in use)
+
+rescan-ns
+
+# TODO: remove below lines if the newly created namespace is filled with unwritten lba
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 0x1000 -ad
+NVMe DSM: success
+
+# write zeroes(to unwritten lba)
+nvme write-zeroes $FQA_DEVICE -n 1 -s 0 -c 0
+NVME Write Zeroes Success
+
+# read and verify - success with zeroes
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (512 bytes)
+read: Success
+00000000
+
+# write data
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -s 10 -c 0 -z 4
+Rounding data size to fit block count (512 bytes)
+write: Success
+
+# read and verify - success with non zero
+nvme read $FQA_DEVICE -n 1 -s 10 -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (512 bytes)
+read: Success
+61626364
+
+# write zeroes(to written lba)
+nvme write-zeroes $FQA_DEVICE -n 1 -s 10 -c 0
+NVME Write Zeroes Success
+
+# read and verify - success with zeroes
+nvme read $FQA_DEVICE -n 1 -s 10 -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (512 bytes)
+read: Success
+00000000
+
+# write zeroes(again)
+nvme write-zeroes $FQA_DEVICE -n 1 -s 10 -c 0
+NVME Write Zeroes Success
+
+# read and verify - success with zeroes
+nvme read $FQA_DEVICE -n 1 -s 10 -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (512 bytes)
+read: Success
+00000000
+
+# read neighborhood lbas - success with no zero
+nvme read $FQA_DEVICE -n 1 -s 9 -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (512 bytes)
+read: Success
+ffffffff
+nvme read $FQA_DEVICE -n 1 -s 11 -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (512 bytes)
+read: Success
+ffffffff
+
+# read lba range including zeroed lba - success
+nvme read $FQA_DEVICE -n 1 -s 5 -c 10 -z 4 | xxd -p -l 4            # 5 - 15
+Rounding data size to fit block count (5632 bytes)
+read: Success
+ffffffff
+nvme read $FQA_DEVICE -n 1 -s 10 -c 10 -z 4 | xxd -p -l 4           # 10 - 20
+Rounding data size to fit block count (5632 bytes)
+read: Success
+00000000
+nvme read $FQA_DEVICE -n 1 -s 9 -c 1 -z 4 | xxd -p -l 4             # 9, 10
+Rounding data size to fit block count (1024 bytes)
+read: Success
+ffffffff
+nvme read $FQA_DEVICE -n 1 -s 10 -c 1 -z 4 | xxd -p -l 4            # 10, 11
+Rounding data size to fit block count (1024 bytes)
+read: Success
+00000000
+# write data
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -s 10 -c 0 -z 4
+Rounding data size to fit block count (512 bytes)
+write: Success
+
+# read lba range  - success
+nvme read $FQA_DEVICE -n 1 -s 5 -c 10 -z 4 | xxd -p -l 4            # 5 - 15
+Rounding data size to fit block count (5632 bytes)
+read: Success
+ffffffff
+nvme read $FQA_DEVICE -n 1 -s 10 -c 10 -z 4 | xxd -p -l 4           # 10 - 20
+Rounding data size to fit block count (5632 bytes)
+read: Success
+61626364
+nvme read $FQA_DEVICE -n 1 -s 9 -c 1 -z 4 | xxd -p -l 4             # 9, 10
+Rounding data size to fit block count (1024 bytes)
+read: Success
+ffffffff
+nvme read $FQA_DEVICE -n 1 -s 10 -c 1 -z 4 | xxd -p -l 4            # 10, 11
+Rounding data size to fit block count (1024 bytes)
+read: Success
+61626364
+rm -f read_result

@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+# initialize
+./initialize
+delete-ns: Success, deleted nsid:-1
+allocated nvm capacitiy is 0GB(0B)
+
+# create a namespace
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 0 -m 0
+create-ns: Success, created nsid:1
+
+# attach the namespace
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+attach-ns: Success, nsid:1
+
+rescan-ns
+
+# reading from attached namespace should success
+nvme read $FQA_DEVICE -n 1 -s 0 -c $((CTRL_ID+1)) -z 4096 -d read_result
+read: Success
+
+# writting to attached namespace should success
+nvme write $FQA_DEVICE -n 1 -s 0 -c $((CTRL_ID+1)) -z 4096 -d read_result
+write: Success
+
+# detach namespace
+nvme detach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+detach-ns: Success, nsid:1
+
+# reading from not attached namespace should fail
+nvme read $FQA_DEVICE -n 1 -s 0 -c $((CTRL_ID+1)) -z 4096 -d read_result
+command error: SC 2 SCT 0
+read:INVALID_FIELD: A reserved coded value or an unsupported value in a defined field(0002)
+
+# writting to not attached namespace should fail
+nvme write $FQA_DEVICE -n 1 -s 0 -c $((CTRL_ID+1)) -z 4096 -d read_result
+command error: SC 2 SCT 0
+write:INVALID_FIELD: A reserved coded value or an unsupported value in a defined field(0002)
+
+rm -f read_result

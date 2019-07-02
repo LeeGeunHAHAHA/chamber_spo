@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+delete-ns: Success, deleted nsid:-1
+
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000
+create-ns: Success, created nsid:1
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000
+create-ns: Success, created nsid:2
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000
+create-ns: Success, created nsid:3
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000
+create-ns: Success, created nsid:4
+
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+attach-ns: Success, nsid:1
+nvme attach-ns $FQA_DEVICE -n 2 -c $CTRL_ID
+attach-ns: Success, nsid:2
+nvme attach-ns $FQA_DEVICE -n 3 -c $CTRL_ID
+attach-ns: Success, nsid:3
+nvme attach-ns $FQA_DEVICE -n 4 -c $CTRL_ID
+attach-ns: Success, nsid:4
+
+rescan-ns
+
+NGUID=`nvme ns-descs $FQA_DEVICE -n 1 | grep nguid | awk '{ print $3 }'`
+echo ${NGUID:14:2}
+01
+NGUID=`nvme ns-descs $FQA_DEVICE -n 2 | grep nguid | awk '{ print $3 }'`
+echo ${NGUID:14:2}
+02
+NGUID=`nvme ns-descs $FQA_DEVICE -n 3 | grep nguid | awk '{ print $3 }'`
+echo ${NGUID:14:2}
+03
+NGUID=`nvme ns-descs $FQA_DEVICE -n 4 | grep nguid | awk '{ print $3 }'`
+echo ${NGUID:14:2}
+04
+

@@ -1,0 +1,12 @@
+#!/bin/bash
+source ../common
+GROUP_TITLE="write & read dependency test"
+PARAM_FILE=parameter
+TITLE='IODEPTH=$IODEPTH'
+
+group_init $@
+
+run_config
+IODEPTH=1 run_test
+TITLE='large random' PARAM_FILE=lba_conflict run_test
+

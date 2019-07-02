@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+nvme list-ns $FQA_DEVICE
+./show_alloc_space
+killall prim_proc -SIGUSR2 2&> /dev/null # discard AERC

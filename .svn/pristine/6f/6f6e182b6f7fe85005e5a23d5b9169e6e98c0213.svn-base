@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+spdk_to_nvme
+0000:03:00.0 (1dc5 6150): uio_pci_generic -> nvme
+
+$NVME_CLI reset $NVME_DEV
+
+# no firmware image downloaded
+$NVME_CLI fw-commit $NVME_DEV -a 0
+NVME Admin command error:FIRMWARE_IMAGE(4107)
+$NVME_CLI fw-commit $NVME_DEV -a 0 -s 1
+NVME Admin command error:FW_ACTIVATION_PROHIBITED(4113)
+$NVME_CLI fw-commit $NVME_DEV -a 0 -s 2
+NVME Admin command error:FIRMWARE_IMAGE(4107)
+$NVME_CLI fw-commit $NVME_DEV -a 0 -s 3
+NVME Admin command error:FIRMWARE_IMAGE(4107)
+$NVME_CLI fw-commit $NVME_DEV -a 0 -s 4
+NVME Admin command error:FIRMWARE_SLOT(4106)
+$NVME_CLI fw-commit $NVME_DEV -a 0 -s 5
+NVME Admin command error:FIRMWARE_SLOT(4106)
+$NVME_CLI fw-commit $NVME_DEV -a 0 -s 6
+NVME Admin command error:FIRMWARE_SLOT(4106)
+$NVME_CLI fw-commit $NVME_DEV -a 0 -s 7
+NVME Admin command error:FIRMWARE_SLOT(4106)
+
+$NVME_CLI fw-commit $NVME_DEV -a 1
+NVME Admin command error:FIRMWARE_IMAGE(4107)
+$NVME_CLI fw-commit $NVME_DEV -a 1 -s 1
+NVME Admin command error:FIRMWARE_IMAGE(4107)
+$NVME_CLI fw-commit $NVME_DEV -a 1 -s 2
+NVME Admin command error:FIRMWARE_IMAGE(4107)
+$NVME_CLI fw-commit $NVME_DEV -a 1 -s 3
+NVME Admin command error:FIRMWARE_IMAGE(4107)
+$NVME_CLI fw-commit $NVME_DEV -a 1 -s 4
+NVME Admin command error:FIRMWARE_SLOT(4106)
+$NVME_CLI fw-commit $NVME_DEV -a 1 -s 5
+NVME Admin command error:FIRMWARE_SLOT(4106)
+$NVME_CLI fw-commit $NVME_DEV -a 1 -s 6
+NVME Admin command error:FIRMWARE_SLOT(4106)
+$NVME_CLI fw-commit $NVME_DEV -a 1 -s 7
+NVME Admin command error:FIRMWARE_SLOT(4106)
+
+$NVME_CLI fw-commit $NVME_DEV -a 2 -s 3
+NVME Admin command error:FIRMWARE_IMAGE(4107)
+$NVME_CLI fw-commit $NVME_DEV -a 2 -s 4
+NVME Admin command error:FIRMWARE_SLOT(4106)
+$NVME_CLI fw-commit $NVME_DEV -a 2 -s 5
+NVME Admin command error:FIRMWARE_SLOT(4106)
+$NVME_CLI fw-commit $NVME_DEV -a 2 -s 6
+NVME Admin command error:FIRMWARE_SLOT(4106)
+$NVME_CLI fw-commit $NVME_DEV -a 2 -s 7
+NVME Admin command error:FIRMWARE_SLOT(4106)
+
+$NVME_CLI fw-commit $NVME_DEV -a 3
+NVME Admin command error:FIRMWARE_IMAGE(4107)
+$NVME_CLI fw-commit $NVME_DEV -a 3 -s 1
+NVME Admin command error:FIRMWARE_IMAGE(4107)
+$NVME_CLI fw-commit $NVME_DEV -a 3 -s 2
+NVME Admin command error:FIRMWARE_IMAGE(4107)
+$NVME_CLI fw-commit $NVME_DEV -a 3 -s 3
+NVME Admin command error:FIRMWARE_IMAGE(4107)
+$NVME_CLI fw-commit $NVME_DEV -a 3 -s 4
+NVME Admin command error:FIRMWARE_SLOT(4106)
+$NVME_CLI fw-commit $NVME_DEV -a 3 -s 5
+NVME Admin command error:FIRMWARE_SLOT(4106)
+$NVME_CLI fw-commit $NVME_DEV -a 3 -s 6
+NVME Admin command error:FIRMWARE_SLOT(4106)
+$NVME_CLI fw-commit $NVME_DEV -a 3 -s 7
+NVME Admin command error:FIRMWARE_SLOT(4106)
+
+for i in {1..10}; do
+  $NVME_CLI fw-download $NVME_DEV -f $FW_BINARY &> /dev/null &
+  $NVME_CLI fw-commit $NVME_DEV -a 3 &> /dev/null
+
+  $NVME_CLI fw-log $NVME_DEV
+done
+Firmware Log for device:nvme0
+afi  : 0x1
+frs1 : 0x5858303254544d41 (AMTT20XX)
+Firmware Log for device:nvme0
+afi  : 0x1
+frs1 : 0x5858303254544d41 (AMTT20XX)
+Firmware Log for device:nvme0
+afi  : 0x1
+frs1 : 0x5858303254544d41 (AMTT20XX)
+Firmware Log for device:nvme0
+afi  : 0x1
+frs1 : 0x5858303254544d41 (AMTT20XX)
+Firmware Log for device:nvme0
+afi  : 0x1
+frs1 : 0x5858303254544d41 (AMTT20XX)
+Firmware Log for device:nvme0
+afi  : 0x1
+frs1 : 0x5858303254544d41 (AMTT20XX)
+Firmware Log for device:nvme0
+afi  : 0x1
+frs1 : 0x5858303254544d41 (AMTT20XX)
+Firmware Log for device:nvme0
+afi  : 0x1
+frs1 : 0x5858303254544d41 (AMTT20XX)
+Firmware Log for device:nvme0
+afi  : 0x1
+frs1 : 0x5858303254544d41 (AMTT20XX)
+Firmware Log for device:nvme0
+afi  : 0x1
+frs1 : 0x5858303254544d41 (AMTT20XX)
+
+nvme_to_spdk
+0000:03:00.0 (1dc5 6150): nvme -> uio_pci_generic

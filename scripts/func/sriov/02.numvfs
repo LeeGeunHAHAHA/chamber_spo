@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+TIMEOUT=10
+
+PF_DEV=/dev/nvme0
+
+VF7_DEV=/dev/nvme7
+
+PF_ADDR=0000:01:00.0
+VF7_ADDR=0000:01:00.7
+
+export FQA_SPDK=
+
+../../setup.sh reset > /dev/null
+rmmod nvme nvme_core
+modprobe nvme_core admin_timeout=1 io_timeout=1 multipath=0 max_retries=0
+modprobe nvme
+
+elapsed=0
+while [[ ! -a $PF_DEV ]]
+do
+  sleep 1
+  elapsed=$((elapsed + 1))
+  if [[ $elapsed -ge $TIMEOUT ]]; then
+    echo "controller not ready!"
+    exit
+  fi
+done
+
+echo 0 > /sys/bus/pci/devices/$PF_ADDR/sriov_numvfs
+sleep 1
+nvme admin-passthru $PF_DEV --opcode=0xc5 --cdw10=1
+sleep 1
+echo 1 > /sys/bus/pci/devices/$PF_ADDR/reset
+sleep 1
+echo 7 > /sys/bus/pci/devices/$PF_ADDR/sriov_numvfs
+
+sleep 5
+
+nvme id-ctrl $VF7_DEV | grep cntlid
+
+nvme id-ctrl $PF_DEV | grep ctlid
+nvme smart-log $PF_DEV > /dev/null
+
+echo 0 > /sys/bus/pci/devices/$PF_ADDR/sriov_numvfs

@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+EXT_OUT=out
+EXT_EXP=exp
+
+DIR=$(dirname ${BASH_SOURCE[0]})
+
+export FQA_SPDK_MEM_SIZE=1024
+
+function pass() {
+  printf "pass\n"
+  rm -f $(basename $1).$EXT_OUT
+  FTEST_SUCCESS=$((FTEST_SUCCESS+1))
+}
+
+function fail() {
+  printf "fail\n"
+  if [[ $FTEST_FAIL == 0 ]]; then
+    echo "$1" > $FTEST_FAIL_LIST
+  else
+    echo "$1" >> $FTEST_FAIL_LIST
+  fi
+  FTEST_FAIL=$((FTEST_FAIL+1))
+}
+
+function run_test() {
+  local TOKENS
+  local CUR_DIR
+  local DIRNAME
+  local BASENAME
+  local LINE
+  local INDENT=$3
+  local REL_PATH
+
+  printf "%*s%-*s" $((INDENT)) "" $((80-INDENT)) $1
+  CUR_DIR=$PWD
+  DIRNAME=$(dirname $1)
+  BASENAME=$(basename $1)
+  if [[ $DIRNAME != "." ]]; then
+    cd $DIRNAME
+    while [[ $DIRNAME == ./* ]]; do
+      DIRNAME=${DIRNAME:2}
+    done
+    REL_PATH=$2/${DIRNAME}
+  else
+    REL_PATH=$2
+  fi
+  if [[ -a $BASENAME ]]; then
+    INDENT=$((INDENT+1))
+    EXT="${1##*.}"
+    if [[ "$EXT" == "lst" ]]; then
+      # test list
+      printf "\n"
+      while IFS='' read -r LINE || [[ -n "$LINE" ]]; do
+        LINE=${LINE%%#*}
+        if [[ -z $LINE ]]; then
+          # ignore empty line or comment
+          continue
+        fi
+
+        TOKENS=( $LINE )
+        if [[ ${#TOKENS[*]} -gt 1 ]]; then
+          eval ${TOKENS[@]:1} 2&> /dev/null
+          res=$?
+          if [[ $res != 0 ]]; then
+            printf "%*s%-*s ... skip\n" $((INDENT)) "" $((80-INDENT)) ${TOKENS[0]}
+            continue
+          fi
+        fi
+        run_test ${TOKENS[0]} $REL_PATH $INDENT
+      done < "$BASENAME"
+    else
+      # test case
+      printf " ... "
+      OUT=$BASENAME.$EXT_OUT
+      RES=$BASENAME.$EXT_EXP
+
+      bash -v $BASENAME 2&> $OUT
+      #cmp -s $RES $OUT
+      diff -I "Error Log Entries for" -I "uio_pci_generic" -I "frs1" $RES $OUT
+      if [[ $? == 0 ]]; then
+        pass $BASENAME
+      else
+        fail $REL_PATH/$BASENAME
+      fi
+    fi
+  else
+    printf " ... "
+    fail $REL_PATH/$BASENAME
+  fi
+  cd $CUR_DIR
+}
+
+print_summary() {
+  NR_TESTCASE=$((FTEST_SUCCESS+FTEST_FAIL))
+  if [[ $NR_TESTCASE != 0 ]]; then
+    printf "=======================================\n"
+    printf " * test summary:\n"
+    printf "   successful           %3u%%(%3u/%3u)\n" $((FTEST_SUCCESS*100/NR_TESTCASE)) $FTEST_SUCCESS $NR_TESTCASE
+    printf "   failed               %3u%%(%3u/%3u)\n" $((FTEST_FAIL*100/NR_TESTCASE)) $FTEST_FAIL $NR_TESTCASE
+    printf "=======================================\n"
+  fi
+}
+
+if [ $# -ne 1 ]; then
+  echo "fadu chamber_spo test framework"
+  echo "usage: $(basename $0) [test case | test list]"
+  exit
+fi
+
+FTEST_FAIL_LIST=$PWD/fail.lst
+FTEST_SUCCESS=0
+FTEST_FAIL=0
+
+# define function for conditional test case
+eval "function $FQA_TARGET() { return 0; }"
+run_test $1 . 0
+
+print_summary
+if [[ $FTEST_FAIL == 0 ]]; then
+  rm -f $FTEST_FAIL_LIST
+fi
+

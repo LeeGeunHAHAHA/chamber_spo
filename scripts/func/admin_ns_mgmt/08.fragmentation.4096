@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+# 1. compaction in idle state
+
+# initialize
+./initialize
+
+# Namespace 1 [1/4]
+ID_CTRL=`nvme id-ctrl $FQA_DEVICE`
+TNVMCAP=`printf "%s\n" "$ID_CTRL" | grep 'tnvmcap' | awk '{ print $3 }'`
+NCAP1=$((TNVMCAP/4096/4))
+nvme create-ns $FQA_DEVICE -s $NCAP1 -c $NCAP1 -f 0
+nvme attach-ns $FQA_DEVICE -c $CTRL_ID -n 1
+
+# Namespace 2 [2/4]
+ID_CTRL=`nvme id-ctrl $FQA_DEVICE`
+UNVMCAP=`printf "%s\n" "$ID_CTRL" | grep 'unvmcap' | awk '{ print $3 }'`
+TNVMCAP=$UNVMCAP
+
+NCAP2=$((TNVMCAP/4096/3*2))
+nvme create-ns $FQA_DEVICE -s $NCAP2 -c $NCAP2 -f 0
+nvme attach-ns $FQA_DEVICE -c $CTRL_ID -n 2
+
+# Namespace 3 [1/4]
+ID_CTRL=`nvme id-ctrl $FQA_DEVICE`
+UNVMCAP=`printf "%s\n" "$ID_CTRL" | grep 'unvmcap' | awk '{ print $3 }'`
+TNVMCAP=$UNVMCAP
+
+NCAP3=$((TNVMCAP/4096))
+nvme create-ns $FQA_DEVICE -s $NCAP3 -c $NCAP3 -f 0
+nvme attach-ns $FQA_DEVICE -c $CTRL_ID -n 3
+
+nvme list-ns $FQA_DEVICE
+
+# delete namespaces
+nvme delete-ns $FQA_DEVICE -n 1
+nvme delete-ns $FQA_DEVICE -n 3
+
+nvme list-ns $FQA_DEVICE
+
+rescan-ns
+
+echo "abcd" | nvme write $FQA_DEVICE -n 2 -z 4
+echo "wxyz" | nvme write $FQA_DEVICE -n 2 -z 4 -s $((NCAP2-1))
+nvme read $FQA_DEVICE -n 2 -z 4
+nvme read $FQA_DEVICE -n 2 -z 4 -s $((NCAP2-1))
+
+# map segment compaction
+nvme create-ns $FQA_DEVICE -s $((NCAP1+NCAP3)) -c $((NCAP1+NCAP3)) -f 0
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+nvme list-ns $FQA_DEVICE
+
+nvme read $FQA_DEVICE -n 2 -z 4
+nvme read $FQA_DEVICE -n 2 -z 4 -s $((NCAP2-1))
+
+# 2. compaction while outstanding I/O
+
+# initialize
+./initialize
+
+# Namespace 1 [1/4]
+ID_CTRL=`nvme id-ctrl $FQA_DEVICE`
+TNVMCAP=`printf "%s\n" "$ID_CTRL" | grep 'tnvmcap' | awk '{ print $3 }'`
+NCAP1=$((TNVMCAP/4096/4))
+nvme create-ns $FQA_DEVICE -s $NCAP1 -c $NCAP1 -f 0
+nvme attach-ns $FQA_DEVICE -c $CTRL_ID -n 1
+
+# Namespace 2 [2/4]
+ID_CTRL=`nvme id-ctrl $FQA_DEVICE`
+UNVMCAP=`printf "%s\n" "$ID_CTRL" | grep 'unvmcap' | awk '{ print $3 }'`
+TNVMCAP=$UNVMCAP
+
+NCAP2=$((TNVMCAP/4096/3*2))
+nvme create-ns $FQA_DEVICE -s $NCAP2 -c $NCAP2 -f 0
+nvme attach-ns $FQA_DEVICE -c $CTRL_ID -n 2
+
+# Namespace 3 [1/4]
+ID_CTRL=`nvme id-ctrl $FQA_DEVICE`
+UNVMCAP=`printf "%s\n" "$ID_CTRL" | grep 'unvmcap' | awk '{ print $3 }'`
+TNVMCAP=$UNVMCAP
+
+NCAP3=$((TNVMCAP/4096))
+nvme create-ns $FQA_DEVICE -s $NCAP3 -c $NCAP3 -f 0
+nvme attach-ns $FQA_DEVICE -c $CTRL_ID -n 3
+
+nvme list-ns $FQA_DEVICE
+
+rescan-ns
+
+nbio -q defrag.param &
+sleep 10
+
+# delete namespaces
+nvme delete-ns $FQA_DEVICE -n 1
+nvme delete-ns $FQA_DEVICE -n 3
+
+# map segment compaction
+nvme create-ns $FQA_DEVICE -s $((NCAP1+NCAP3)) -c $((NCAP1+NCAP3)) -f 0
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+nvme list-ns $FQA_DEVICE
+
+wait
+echo $?

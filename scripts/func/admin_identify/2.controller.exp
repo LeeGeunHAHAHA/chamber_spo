@@ -1,0 +1,5 @@
+# identify controller
+rescan-ns
+nvme id-ctrl $FQA_DEVICE | grep "vid"
+vid       : 0x1dc5
+ssvid     : 0x1dc5

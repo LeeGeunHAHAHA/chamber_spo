@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+export RESOURCE_TYPE_VQ=0
+export RESOURCE_TYPE_VI=1
+export ACT_PRI_CTRL_ALLOC=1
+export ACT_SEC_CTRL_OFFLINE=7
+export ACT_SEC_CTRL_ASSIGN=8
+export ACT_SEC_CTRL_ONLINE=9
+
+function virtual_mgmt() {
+  ctlid=$1
+  rt=$2
+  act=$3
+  nr=$4
+  cdw10=$(((ctlid << 16)|(rt << 8)|(act)))
+  nvme admin-passthru $FQA_DEVICE --opcode=0x1c --cdw10=$cdw10 --cdw11=$nr
+}
+
+function flr() {
+  killall prim_proc 2&> /dev/null
+  setpci -s $FQA_DEVICE CAP_EXP+8.W=8000:8000
+  echo 1 > /sys/bus/pci/devices/$FQA_DEVICE/remove
+  echo 1 > /sys/bus/pci/rescan
+}
+
+function id_prim_ctrl_cap() {
+  nvme admin-passthru $FQA_DEVICE --opcode=0x6 --cdw10=0x14 -r -l 4096 -b | ./prim_cap_parse
+}
+
+function id_sec_ctrl_list() {
+  nvme admin-passthru $FQA_DEVICE --opcode=0x6 --cdw10=0x15 -r -l 4096 -b | ./sec_list_parse $1
+}
+

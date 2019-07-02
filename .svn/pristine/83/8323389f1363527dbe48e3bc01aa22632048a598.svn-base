@@ -1,0 +1,18 @@
+# initialize
+./initialize
+delete-ns: Success, deleted nsid:-1
+allocated nvm capacitiy is 0GB(0B)
+
+# thin provisioning not supported
+nvme create-ns $FQA_DEVICE -s 0x200000 -c 0x10000 -f 0 -d 0 -m 0
+command error: SC 1b SCT 1
+NVMe Status:THIN_PROVISIONING_NOT_SUPPORTED: Thin provisioning is not supported by the controller(11b)
+
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x200000 -f 0 -d 0 -m 0
+command error: SC 1b SCT 1
+NVMe Status:THIN_PROVISIONING_NOT_SUPPORTED: Thin provisioning is not supported by the controller(11b)
+
+# check nvm capacity(not allocated)
+./show_alloc_space
+allocated nvm capacitiy is 0GB(0B)
+nvme list-ns $FQA_DEVICE -a

@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+# initialize
+./initialize
+delete-ns: Success, deleted nsid:-1
+allocated nvm capacitiy is 0GB(0B)
+
+rescan-ns
+
+# delete not existing namespac
+for i in $(seq 0 $((MAX_NS+1))); do
+  nvme delete-ns $FQA_DEVICE -n $i
+done
+delete-ns: namespace-id parameter required
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFE
+command error: SC b SCT 0
+NVMe Status:INVALID_NS: The namespace or the format of that namespace is invalid(b)
+
+# create namespace with invalid lba format
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 8 -d 0 -m 0
+command error: SC a SCT 1
+NVMe Status:INVALID_FORMAT: The LBA Format specified is not supported. This may be due to various conditions(10a)
+
+# namespace management command with invalid select field
+nvme admin-passthru $FQA_DEVICE -o 0xd -n 1 -4 3
+command error: SC 2 SCT 0
+NVMe Status:INVALID_FIELD: A reserved coded value or an unsupported value in a defined field(2) Command Result:00000000
+
+# create namespace with invalid namespace size and capacity
+nvme create-ns $FQA_DEVICE -s 0x10000000000 -c 0x10000000000 -f 0 -d 0 -m 0
+command error: SC 15 SCT 1
+NVMe Status:NS_INSUFFICIENT_CAPACITY: Creating the namespace requires more free space than is currently available. The Command Specific Information field of the Error Information Log specifies the total amount of NVM capacity required to create the namespace in bytes(115)
+
+# over-provisioning
+nvme create-ns $FQA_DEVICE -s 0x10000000000 -c 0x1000000000 -f 0 -d 0 -m 0
+command error: SC 1b SCT 1
+NVMe Status:THIN_PROVISIONING_NOT_SUPPORTED: Thin provisioning is not supported by the controller(11b)
+
+# enable data protection in lba format without metadata
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 1 -m 0
+command error: SC a SCT 1
+NVMe Status:INVALID_FORMAT: The LBA Format specified is not supported. This may be due to various conditions(10a)
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 2 -m 0
+command error: SC a SCT 1
+NVMe Status:INVALID_FORMAT: The LBA Format specified is not supported. This may be due to various conditions(10a)
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 3 -m 0
+command error: SC a SCT 1
+NVMe Status:INVALID_FORMAT: The LBA Format specified is not supported. This may be due to various conditions(10a)
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 2 -d 1 -m 0
+command error: SC a SCT 1
+NVMe Status:INVALID_FORMAT: The LBA Format specified is not supported. This may be due to various conditions(10a)
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 2 -d 2 -m 0
+command error: SC a SCT 1
+NVMe Status:INVALID_FORMAT: The LBA Format specified is not supported. This may be due to various conditions(10a)
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 2 -d 3 -m 0
+command error: SC a SCT 1
+NVMe Status:INVALID_FORMAT: The LBA Format specified is not supported. This may be due to various conditions(10a)
+
+nvme list-ns $FQA_DEVICE -a
+
+nvme error-log $FQA_DEVICE -e 1 | grep -v 'error_count' | grep -v 'cmdid'
+Error Log Entries for device:0000:01:00.0 entries:1
+.................
+ Entry[ 0]   
+.................
+sqid         : 0
+status_field : 0x422b(NS_INSUFFICIENT_CAPACITY: Creating the namespace requires more free space than is currently available. The Command Specific Information field of the Error Information Log specifies the total amount of NVM capacity required to create the namespace in bytes)
+parm_err_loc : 0xffff
+lba          : 0
+nsid         : 0
+vs           : 0
+cs           : 0x2000000000000
+.................

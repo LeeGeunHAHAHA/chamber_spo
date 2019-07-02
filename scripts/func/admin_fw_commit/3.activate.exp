@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+rescan-ns
+
+nvme fw-commit $FQA_DEVICE -a 2
+command error: SC 11 SCT 1
+Success activating firmware action:2 slot:0, but firmware requires any controller reset
+
+nvme get-feature $FQA_DEVICE -f 7  # number of queueus
+get-feature:0x7 (Number of Queues), Current value:0x7d007d
+
+# reset controller
+rescan-ns
+
+nvme get-feature $FQA_DEVICE -f 7  # number of queueus
+get-feature:0x7 (Number of Queues), Current value:0x7d007d

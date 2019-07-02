@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+source ../../../common > /dev/null 2>&1
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000 -f $FLBAS_4096 -d 0 -m 0
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+nvme list-ns $FQA_DEVICE
+
+rescan-ns
+
+# write lbas
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -s 0 -c 0 -z 4
+echo "dcba" | nvme write $FQA_DEVICE -n 1 -s 255 -c 0 -z 4
+
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -s 512 -c 0 -z 4
+echo "dcba" | nvme write $FQA_DEVICE -n 1 -s 1023 -c 0 -z 4
+
+# read the lbas
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+nvme read $FQA_DEVICE -n 1 -s 255 -c 0 -z 4 | xxd -p -l 4
+
+nvme read $FQA_DEVICE -n 1 -s 512 -c 0 -z 4 | xxd -p -l 4
+nvme read $FQA_DEVICE -n 1 -s 1023 -c 0 -z 4 | xxd -p -l 4
+
+# deallocate the lbas(2 ranges)
+nvme dsm $FQA_DEVICE -n 1 -s 0,512 -b 256,512 -ad
+
+# read the lbas(should be ffffffff)
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+nvme read $FQA_DEVICE -n 1 -s 255 -c 0 -z 4 | xxd -p -l 4
+
+nvme read $FQA_DEVICE -n 1 -s 512 -c 0 -z 4 | xxd -p -l 4
+nvme read $FQA_DEVICE -n 1 -s 1023 -c 0 -z 4 | xxd -p -l 4
+
+# deallocate the lbas(256 ranges)
+slba_range=
+length_range=
+for i in {1..256}; do
+  lba=$((i * 16))
+  printf "lba %-3u: " $lba
+  echo "abcd" | nvme write $FQA_DEVICE -n 1 -s $lba -c 0 -z 4 2> /dev/null
+  nvme read $FQA_DEVICE -n 1 -s $lba -c 0 -z 4 2> /dev/null | xxd -p -l 4
+  if [[ $i == 1 ]]; then
+    slba_range=$lba
+    length_range=1
+  else
+    slba_range=$slba_range","$lba
+    length_range=$length_range",1"
+  fi
+done
+
+echo "slba_range  : $slba_range"
+echo "length_range: $length_range"
+nvme dsm $FQA_DEVICE -n 1 -s $slba_range -b $length_range -ad
+
+for i in {1..256}; do
+  lba=$((i * 16))
+  printf "lba %-3u: " $lba
+  nvme read $FQA_DEVICE -n 1 -s $lba -c 0 -z 4 2> /dev/null | xxd -p -l 4
+done
+

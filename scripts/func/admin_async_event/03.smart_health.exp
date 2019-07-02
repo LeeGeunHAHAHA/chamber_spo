@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+init
+
+# enable all asynchronous events
+nvme set-feature $FQA_DEVICE -f 11 -v 0xffff
+set-feature:0b (Async Event Configuration), value:0x00ffff
+
+# clear smart/health status event
+nvme smart-log $FQA_DEVICE > /dev/null
+check_aerc
+
+# raise smart/health warning aer
+nvme set-feature $FQA_DEVICE -f 4 -v 0
+set-feature:04 (Temperature Threshold), value:00000000
+check_aerc
+Asynchronous Event Type: SMART/Health Status(1)
+Asynchronous Event Info: Temperature Threshold(1)
+
+# critical warning(temperature threshold exceed) set
+nvme smart-log $FQA_DEVICE | grep crit
+critical_warning                    : 0x2
+check_aerc
+
+nvme set-feature $FQA_DEVICE -f 4 -v 353
+set-feature:04 (Temperature Threshold), value:0x000161
+check_aerc
+
+# no critical warning
+nvme smart-log $FQA_DEVICE | grep crit
+critical_warning                    : 0
+check_aerc
+
+# raise smart/health warning aer
+nvme set-feature $FQA_DEVICE -f 4 -v 0
+set-feature:04 (Temperature Threshold), value:00000000
+check_aerc
+Asynchronous Event Type: SMART/Health Status(1)
+Asynchronous Event Info: Temperature Threshold(1)
+
+# critical warning(temperature threshold exceed) set
+nvme smart-log $FQA_DEVICE | grep crit
+critical_warning                    : 0x2
+check_aerc
+
+nvme set-feature $FQA_DEVICE -f 4 -v 353
+set-feature:04 (Temperature Threshold), value:0x000161
+check_aerc
+
+# no critical warning
+nvme smart-log $FQA_DEVICE | grep crit
+critical_warning                    : 0
+check_aerc
+

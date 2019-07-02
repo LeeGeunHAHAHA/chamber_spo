@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+spdk_to_nvme
+0000:03:00.0 (1dc5 6150): uio_pci_generic -> nvme
+
+$NVME_CLI fw-download $NVME_DEV -f $FW_BINARY
+Firmware download success
+$NVME_CLI fw-commit $NVME_DEV -a 1
+Success activating firmware action:1 slot:0, but firmware requires any controller reset
+
+$NVME_CLI reset $NVME_DEV
+
+$NVME_CLI fw-download $NVME_DEV -f $FW_BINARY
+Firmware download success
+$NVME_CLI fw-commit $NVME_DEV -a 1
+Success activating firmware action:1 slot:0, but firmware requires any controller reset
+
+rmmod nvme      # controller shutdown
+modprobe nvme   # controller reset and initialize
+
+nvme_to_spdk
+0000:03:00.0 (1dc5 6150): nvme -> uio_pci_generic

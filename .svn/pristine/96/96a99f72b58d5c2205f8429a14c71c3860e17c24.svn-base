@@ -1,0 +1,11 @@
+#!/bin/bash
+../../setup.sh reset
+export FQA_SPDK=
+nvme delete-ns /dev/nvme0 -n 0xFFFFFFFF
+nvme create-ns /dev/nvme0 -s 0x1000000 -c 0x1000000 -f 0 -m 1
+nvme attach-ns /dev/nvme0 -n 1 -c 0
+nvme ns-rescan /dev/nvme0
+
+sleep 1
+
+fio randrw

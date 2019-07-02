@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+rescan-ns
+
+nvme fw-commit $FQA_DEVICE -a 2
+
+nvme get-feature $FQA_DEVICE -f 7  # number of queueus
+
+# reset controller
+rescan-ns
+
+nvme get-feature $FQA_DEVICE -f 7  # number of queueus

@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+make > /dev/null
+
+FQA_SPDK=1
+../../setup config 2&> /dev/null
+rescan-ns
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+delete-ns: Success, deleted nsid:-1
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000 -f 0
+create-ns: Success, created nsid:1
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+attach-ns: Success, nsid:1
+
+rescan-ns
+
+nvme format $FQA_DEVICE -n 1
+Success formatting namespace:1
+
+nvme set-feature $FQA_DEVICE -f 0xa -v 1    # disable atomic write
+set-feature:0a (Write Atomicity Normal), value:0x000001
+nvme get-feature $FQA_DEVICE -f 0xa         # check
+get-feature:0xa (Write Atomicity Normal), Current value:0x000001
+
+./atomic_write > /dev/null
+inconsistent read data detected!
+res=$?
+if [[ $res == 0 ]]; then
+  echo "no data mix found despite atomic write disabled"
+else
+  echo "data mix found"
+fi
+data mix found
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+delete-ns: Success, deleted nsid:-1
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000 -f 2
+create-ns: Success, created nsid:1
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+attach-ns: Success, nsid:1
+
+rescan-ns
+
+nvme set-feature $FQA_DEVICE -f 0xa -v 1    # disable atomic write
+set-feature:0a (Write Atomicity Normal), value:0x000001
+nvme get-feature $FQA_DEVICE -f 0xa         # check
+get-feature:0xa (Write Atomicity Normal), Current value:0x000001
+
+./atomic_write > /dev/null
+inconsistent read data detected!
+res=$?
+if [[ $res == 0 ]]; then
+  echo "no data mix found despite atomic write disabled"
+else
+  echo "data mix found"
+fi
+data mix found

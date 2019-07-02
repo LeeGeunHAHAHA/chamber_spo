@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+# identify namespace list
+rescan-ns
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF 2&> /dev/null
+nvme create-ns $FQA_DEVICE -c 0x1000 -s 0x1000 -f 0
+create-ns: Success, created nsid:1
+nvme create-ns $FQA_DEVICE -c 0x1000 -s 0x1000 -f 0
+create-ns: Success, created nsid:2
+nvme create-ns $FQA_DEVICE -c 0x1000 -s 0x1000 -f 0
+create-ns: Success, created nsid:3
+nvme create-ns $FQA_DEVICE -c 0x1000 -s 0x1000 -f 0
+create-ns: Success, created nsid:4
+
+nvme list-ns $FQA_DEVICE
+
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+attach-ns: Success, nsid:1
+nvme attach-ns $FQA_DEVICE -n 2 -c $CTRL_ID
+attach-ns: Success, nsid:2
+nvme attach-ns $FQA_DEVICE -n 3 -c $CTRL_ID
+attach-ns: Success, nsid:3
+nvme attach-ns $FQA_DEVICE -n 4 -c $CTRL_ID
+attach-ns: Success, nsid:4
+
+nvme list-ns $FQA_DEVICE
+[   0]:0x1
+[   1]:0x2
+[   2]:0x3
+[   3]:0x4

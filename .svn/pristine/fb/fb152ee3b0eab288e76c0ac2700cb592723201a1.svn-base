@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+source ../../common > /dev/null 2>&1
+
+# initialize
+nvme delete-ns $FQA_DEVICE -n 0xffffffff
+delete-ns: Success, deleted nsid:-1
+nvme create-ns $FQA_DEVICE -s 0x100000 -c 0x100000 -f $FLBAS_4096
+create-ns: Success, created nsid:1
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+attach-ns: Success, nsid:1
+
+rescan-ns
+
+# TODO: remove below lines if the newly created namespace is filled with unwritten lba
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 0x100 -ad
+NVMe DSM: success
+nvme dsm $FQA_DEVICE -n 1 -s 0xf00 -b 0x300 -ad
+NVMe DSM: success
+
+# write uncorrectable(to unwritten lba)
+nvme write-uncor $FQA_DEVICE -n 1 -s 0 -c 255
+NVME Write Uncorrectable Success
+
+# read and verify - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4096 -d read_result
+command error: SC 81 SCT 2
+read:READ_ERROR: The read data could not be recovered from the media(0281)
+nvme read $FQA_DEVICE -n 1 -s 255 -c 0 -z 4096 -d read_result
+command error: SC 81 SCT 2
+read:READ_ERROR: The read data could not be recovered from the media(0281)
+
+# write data
+nvme write $FQA_DEVICE -n 1 -s 0x1000 -c 255 -z 4096 -d read_result
+Rounding data size to fit block count (1048576 bytes)
+write: Success
+
+# read and verify - success
+nvme read $FQA_DEVICE -n 1 -s 0x1000 -c 255 -z 4096 -d read_result
+Rounding data size to fit block count (1048576 bytes)
+read: Success
+
+# write uncorrectable(to written lba)
+nvme write-uncor $FQA_DEVICE -n 1 -s 0x1000 -c 255
+NVME Write Uncorrectable Success
+
+# read and verify - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 0x1000 -c 255 -z 4096 -d read_result
+Rounding data size to fit block count (1048576 bytes)
+command error: SC 81 SCT 2
+read:READ_ERROR: The read data could not be recovered from the media(0281)
+
+# write uncorrectable(again)
+nvme write-uncor $FQA_DEVICE -n 1 -s 0x1000 -c 255                      # 0x1000 - 0x10ff
+NVME Write Uncorrectable Success
+
+# read and verify - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 0x1000 -c 0255 -z 4096 -d read_result
+Rounding data size to fit block count (712704 bytes)
+command error: SC 81 SCT 2
+read:READ_ERROR: The read data could not be recovered from the media(0281)
+
+# read neighborhood lbas - success
+nvme read $FQA_DEVICE -n 1 -s 0xfff -c 0 -z 4096 -d read_result
+read: Success
+nvme read $FQA_DEVICE -n 1 -s 0x1100 -c 0 -z 4096 -d read_result
+read: Success
+
+# read lba range including uncorrectable bla - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 0xff8 -c 0x10 -z 4096 -d read_result      # 0xff8 - 0x1108
+Rounding data size to fit block count (69632 bytes)
+command error: SC 81 SCT 2
+read:READ_ERROR: The read data could not be recovered from the media(0281)
+nvme read $FQA_DEVICE -n 1 -s 0x10ff -c 0x10 -z 4096 -d read_result     # 0x10ff - 0x110f
+Rounding data size to fit block count (69632 bytes)
+command error: SC 81 SCT 2
+read:READ_ERROR: The read data could not be recovered from the media(0281)
+nvme read $FQA_DEVICE -n 1 -s 0xfff -c 1 -z 4096 -d read_result         # 0xfff, 0x1000
+Rounding data size to fit block count (8192 bytes)
+command error: SC 81 SCT 2
+read:READ_ERROR: The read data could not be recovered from the media(0281)
+nvme read $FQA_DEVICE -n 1 -s 0x10ff -c 1 -z 4096 -d read_result        # 0x10ff, 0x1100
+Rounding data size to fit block count (8192 bytes)
+command error: SC 81 SCT 2
+read:READ_ERROR: The read data could not be recovered from the media(0281)
+
+rm -f read_result

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+source ../../common > /dev/null 2>&1
+
+# initialize
+nvme delete-ns $FQA_DEVICE -n 0xffffffff
+nvme create-ns $FQA_DEVICE -s 0x100000 -c 0x100000 -f 0
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+
+rescan-ns
+
+nvme id-ns $FQA_DEVICE -n 1 | grep "in use"
+
+# TODO: remove below lines if the newly created namespace is filled with unwritten lba
+echo 1 | nvme write $FQA_DEVICE -n 1 -s 0xff0 -c 128 -z 1
+echo 1 | nvme write $FQA_DEVICE -n 1 -s 0x17f0 -c 128 -z 1
+
+# write uncorrectable(to unwritten lba)
+nvme write-uncor $FQA_DEVICE -n 1 -s 0 -c 2047
+
+# read and verify - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4096 -d read_result
+nvme read $FQA_DEVICE -n 1 -s 2047 -c 0 -z 4096 -d read_result
+
+# write data
+nvme write $FQA_DEVICE -n 1 -s 0x1000 -c 2047 -z 4096 -d read_result
+
+# read and verify - success
+nvme read $FQA_DEVICE -n 1 -s 0x1000 -c 2047 -z 4096 -d read_result
+
+# write uncorrectable(to written lba)
+nvme write-uncor $FQA_DEVICE -n 1 -s 0x1000 -c 2047
+
+# read and verify - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 0x1000 -c 2047 -z 4096 -d read_result
+
+# write uncorrectable(again)
+nvme write-uncor $FQA_DEVICE -n 1 -s 0x1000 -c 2047                     # 0x1000 - 0x17ff
+
+# read and verify - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 0x1000 -c 2047 -z 4096 -d read_result
+
+# read neighborhood lbas - success
+nvme read $FQA_DEVICE -n 1 -s 0xfff -c 0 -z 4096 -d read_result
+nvme read $FQA_DEVICE -n 1 -s 0x1800 -c 0 -z 4096 -d read_result
+
+# read lba range including uncorrectable bla - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 0xff8 -c 0x10 -z 4096 -d read_result      # 0xff8 - 0x1108
+nvme read $FQA_DEVICE -n 1 -s 0x17ff -c 0x10 -z 4096 -d read_result     # 0x17ff - 0x110f
+nvme read $FQA_DEVICE -n 1 -s 0xfff -c 1 -z 4096 -d read_result         # 0xfff, 0x1000
+nvme read $FQA_DEVICE -n 1 -s 0x17ff -c 1 -z 4096 -d read_result        # 0x17ff, 0x1800
+
+rm -f read_result

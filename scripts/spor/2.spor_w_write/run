@@ -1,0 +1,185 @@
+#!/bin/bash
+source ../common
+source ../parser_plp.sh
+GROUP_TITLE="Sudden POR Test - Type B"
+PARAM_FILE=parameter
+SEED=1
+TITLE='OPERATION=$OPERATION LBA_RANGE=$LBA_RANGE AMOUNT=$AMOUNT SLBA=$SLBA IOSIZE=$IOSIZE IODEPTH=$IODEPTH'
+NLBS=16
+START_PERCENT=0
+TEST_WINDOW_PERCENT=100
+#AMOUNT_TIME=30m
+#SPOR_TIME=15m
+AMOUNT_TIME=1m
+SPOR_TIME_MIN=15
+SPOR_TIME_MAX=30
+AMOUNT_RD_PERCENT=100
+IODEPTH_RD=32
+IODEPTH_WR=32
+IODEPTH_MAX=64
+LBASIZE=4096
+SPO_AT_SPOR_MSEC_MIN=5000
+SPO_AT_SPOR_MSEC_MAX=20000
+SPO_AT_SPOR_CNT=0
+SPO_AT_SPOR_RATIO=1
+FULL_VERIFY_CYCLE=50
+PATH_FQA_TEST_SCRIPT=~/fqa/trunk/fqa_test_script
+PATH_GET_LOG=./get_log
+
+mkfile_time=$(date "+%Y%m%d_%H%M%S")
+filename=res/output_${FQA_DEVICE}_${mkfile_time}.csv
+mkdir -p res || true
+ln -sf $filename ${LOG_FILE}
+
+group_init $@
+
+ulimit -c unlimited
+
+rm ./hex_log/plp_time_log_${FQA_DEVICE}
+
+rm -rf $PATH_GET_LOG
+mkdir $PATH_GET_LOG
+
+power_off
+reset_spdk
+power_on
+enable_spdk
+
+run_config
+clean_journal
+format_4k
+
+#IOSIZE_WR=$NAMESPACE_BSZ
+IOSIZE_WR_MIN=4k
+IOSIZE_WR=128K
+IOSIZE_RD_REPLAY=4k
+IOSIZE_RD_FULL=128K
+
+#echo "namespace_bsz    : $NAMESPACE_BSZ"
+#echo "namespace_size   : $NAMESPACE_SIZE"
+#echo "namspacee_size_gb: $NAMESPACE_SIZE_GB"
+#echo "IOSIZE_WR         : $IOSIZE_WR" 
+#echo "IOSIZE_RD         : $IOSIZE_RD" 
+
+echo "intr_ms, wait_pss0_ms, wait_pss1_ms, plp_ready_ms, dumpping_start_time, dumping_ms, dumpped_ms, event_ms" > ${LOG_FILE}
+
+LOOP=10000
+
+# Full Seq Write
+#OPERATION=write LBA_RANGE="0%:100%" AMOUNT="byte:100%" SLBA=SEQ IOSIZE=$IOSIZE_WR IODEPTH=$IODEPTH_MAX SEED=0 run_test
+
+for ((i=1;i<$LOOP;i++))
+do
+	echo -e "\n\n*********************** [$i/$LOOP] ***********************\n\n"
+	$PATH_FQA_TEST_SCRIPT/send_current_status.sh "SPOR $i/$LOOP"
+
+	# START_PWRCYC=$(get_power_cycles_count)
+	# START_UNSAFE=$(get_unsafe_shutdowns_count)
+
+	# echo "Power Cycles 		: $START_PWRCYC"
+	# echo "Unsafe Shutdowns 	: $START_UNSAFE"
+
+	# write only
+	#OPERATION=write
+
+	# mixed
+	#OPERATION=read:20,write:78,deallocate:2
+	#OPERATION=write:98,deallocate:2
+	#OPERATION=write:98,write_zeroes:2
+	OPERATION=write:50,read:50
+
+	LBA_RANGE="$START_PERCENT%:$TEST_WINDOW_PERCENT%"
+	AMOUNT="TIME:$AMOUNT_TIME"
+	SLBA=uniform
+	IOSIZE="$IOSIZE_WR_MIN-$IOSIZE_WR"
+	IODEPTH=$IODEPTH_WR
+	NBIO_BG=1
+	OPERATION=$OPERATION LBA_RANGE=$LBA_RANGE AMOUNT=$AMOUNT SLBA=$SLBA IOSIZE=$IOSIZE IODEPTH=$IODEPTH SEED=$SEED run_test
+
+	SPOR_TIME=$(( ( RANDOM % (SPOR_TIME_MAX - SPOR_TIME_MIN) ) + SPOR_TIME_MIN ))
+
+	echo "*** nbio running on background (pid $NBIO_BG_PID) ***"
+	echo "*** sudden power off after $SPOR_TIME secs***"
+	sleep $SPOR_TIME
+
+	# sudden power off
+	power_off
+	reset_spdk
+
+	# Wait for SPO at SPOR
+	spo_at_spor
+
+	power_on
+
+	
+	nvme_scan_cnt=0
+	nvme_device=$(echo /dev/$(ls /sys/bus/pci/devices/${FQA_DEVICE}/nvme)n1)
+	while [ ! -e "$nvme_device" ]
+	do
+		let nvme_scan_cnt=${nvme_scan_cnt}+1
+		echo -ne "[${nvme_scan_cnt}] $nvme_device file not ready\r"
+		sleep 1s
+	done
+	send_vu_cmd_plp_time_info ${i}
+	sleep 3
+
+
+	enable_spdk
+
+	${PATH_FQA_TEST_SCRIPT}/get_log_page_set.sh $FQA_DEVICE $PATH_GET_LOG $i
+
+	# END_PWRCYC=$(get_power_cycles_count)
+	# END_UNSAFE=$(get_unsafe_shutdowns_count)
+
+	# echo "Power Cycles 		: $END_PWRCYC"
+	# echo "Unsafe Shutdowns 	: $END_UNSAFE"
+
+	# DIFF_PWRCYC=$(($END_PWRCYC - $START_PWRCYC))
+	# DIFF_UNSAFE=$(($END_UNSAFE - $START_UNSAFE))
+
+	# if [ $DIFF_PWRCYC -ne 1 ]; then
+	# 	printf "$FAIL - power cycles must be increased!"
+	# 	exit -1
+	# fi
+
+	# if [ $DIFF_UNSAFE -ne 1 ]; then
+	# 	printf "$FAIL - unsafe shutdowns must be increased!"
+	# 	exit -1
+	# fi
+
+	# read (replay verify)
+	OPERATION=read
+	SLBA=replay
+	AMOUNT="INFINITE"
+	IOSIZE=$IOSIZE_RD_REPLAY			# Don't Care
+	IODEPTH=$IODEPTH_MAX		# Don't Care
+	NBIO_BG=0
+	OPERATION=$OPERATION LBA_RANGE=$LBA_RANGE AMOUNT=$AMOUNT SLBA=$SLBA IOSIZE=$IOSIZE IODEPTH=$IODEPTH SEED=$SEED run_test
+
+	if [ $((i % FULL_VERIFY_CYCLE)) -eq 0 ]; then
+		# read (full verify)
+		OPERATION=read
+		AMOUNT="BYTE:$AMOUNT_RD_PERCENT%"
+		SLBA=seq
+		IOSIZE=$IOSIZE_RD_FULL
+		IODEPTH=$IODEPTH_MAX
+		OPERATION=$OPERATION LBA_RANGE=$LBA_RANGE AMOUNT=$AMOUNT SLBA=$SLBA IOSIZE=$IOSIZE IODEPTH=$IODEPTH SPOR_LEVEL=$SPOR_LEVEL SEED=$SEED run_test
+	fi
+
+	SEED=$((SEED + 1))
+	
+	cd log
+	FILE_LIST=(`ls -alt | grep $FQA_DEVICE | grep ^- | awk '{print $9}'`)
+	for ((num=300;num<${#FILE_LIST[*]};num++)); do
+		rm -rf ${FILE_LIST[num]}
+	done
+	cd ..
+done
+
+
+
+if [ $i -ge $LOOP ];then
+	$PATH_FQA_TEST_SCRIPT/send_current_status.sh "SPOR Test Pass [${i}cycle]"
+else
+	$PATH_FQA_TEST_SCRIPT/send_current_status.sh "SPOR Test Fail [${i}cycle]"
+fi

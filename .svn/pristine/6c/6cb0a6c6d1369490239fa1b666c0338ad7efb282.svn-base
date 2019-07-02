@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+# Media and Data Integrity Errors
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+
+nvme create-ns $FQA_DEVICE -c 0x100000 -s 0x100000 -f 1 -d 1    # Data Protection Type 1
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+
+rescan-ns
+
+MEDIA_ERRORS_OLD=`nvme smart-log $FQA_DEVICE | grep media_errors | sed 's/,//g' | awk '{ print $3 }'`
+
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -z 4 -p 0xf -a 0xdead -m 0xffff
+
+# success
+nvme read $FQA_DEVICE -n 1 -z 4 -y 1 -p 0xf -a 0xdead -m 0xffff | xxd -p -l 4
+
+MEDIA_ERRORS_NEW=`nvme smart-log $FQA_DEVICE | grep media_errors | sed 's/,//g' | awk '{ print $3 }'`
+
+if [[ $MEDIA_ERRORS_OLD != $MEDIA_ERRORS_NEW ]]; then
+  echo "expected <$MEDIA_ERRORS_OLD>, but was <$MEDIA_ERRORS_NEW>"
+fi
+
+# apptag error
+# nvme read $FQA_DEVICE -n 1 -z 4 -y 1 -p 0xf -a 0x1111 -m 0xffff | xxd -p -l 4
+
+# MEDIA_ERRORS_NEW=`nvme smart-log $FQA_DEVICE | grep media_errors | sed 's/,//g' | awk '{ print $3 }'`
+
+# if [[ $((MEDIA_ERRORS_OLD+1)) != $MEDIA_ERRORS_NEW ]]; then
+#   echo "expected <$((MEDIA_ERRORS_OLD+1))>, but was <$MEDIA_ERRORS_NEW>"
+# fi
+
+# Data Units Read/Written, Host Read/Write Commands
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+
+nvme create-ns $FQA_DEVICE -c 0x100000 -s 0x100000
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+
+rescan-ns
+
+nvme smart-log $FQA_DEVICE > smart.tmp
+DATA_UNIT_RD_OLD=`cat smart.tmp | grep data_units_read | sed 's/,//g' | awk '{ print $3 }'`
+DATA_UNIT_WR_OLD=`cat smart.tmp | grep data_units_written | sed 's/,//g' | awk '{ print $3 }'`
+HOST_RD_CMDS_OLD=`cat smart.tmp | grep host_read_commands | sed 's/,//g' | awk '{ print $3 }'`
+HOST_WR_CMDS_OLD=`cat smart.tmp | grep host_write_commands | sed 's/,//g' | awk '{ print $3 }'`
+
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -z 4 -c 999
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -z 4 -c 1998
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -z 4 -c 999
+
+nvme smart-log $FQA_DEVICE > smart.tmp
+DATA_UNIT_RD_NEW=`cat smart.tmp | grep data_units_read | sed 's/,//g' | awk '{ print $3 }'`
+DATA_UNIT_WR_NEW=`cat smart.tmp | grep data_units_written | sed 's/,//g' | awk '{ print $3 }'`
+HOST_RD_CMDS_NEW=`cat smart.tmp | grep host_read_commands | sed 's/,//g' | awk '{ print $3 }'`
+HOST_WR_CMDS_NEW=`cat smart.tmp | grep host_write_commands | sed 's/,//g' | awk '{ print $3 }'`
+
+if [[ $((DATA_UNIT_RD_OLD)) != $DATA_UNIT_RD_NEW ]]; then
+  echo "expected <$((DATA_UNIT_RD_OLD))>, but was <$DATA_UNIT_RD_NEW>"
+fi
+
+if [[ $((DATA_UNIT_WR_OLD+4)) != $DATA_UNIT_WR_NEW ]]; then
+  echo "expected <$((DATA_UNIT_WR_OLD+4))>, but was <$DATA_UNIT_WR_NEW>"
+fi
+
+if [[ $((HOST_RD_CMDS_OLD)) != $HOST_RD_CMDS_NEW ]]; then
+  echo "expected <$((HOST_RD_CMDS_OLD))>, but was <$HOST_RD_CMDS_NEW>"
+fi
+
+if [[ $((HOST_WR_CMDS_OLD+4)) != $HOST_WR_CMDS_NEW ]]; then
+  echo "expected <$((HOST_WR_CMDS_OLD+4))>, but was <$HOST_WR_CMDS_NEW>"
+fi
+
+nvme smart-log $FQA_DEVICE > smart.tmp
+DATA_UNIT_RD_OLD=`cat smart.tmp | grep data_units_read | sed 's/,//g' | awk '{ print $3 }'`
+DATA_UNIT_WR_OLD=`cat smart.tmp | grep data_units_written | sed 's/,//g' | awk '{ print $3 }'`
+HOST_RD_CMDS_OLD=`cat smart.tmp | grep host_read_commands | sed 's/,//g' | awk '{ print $3 }'`
+HOST_WR_CMDS_OLD=`cat smart.tmp | grep host_write_commands | sed 's/,//g' | awk '{ print $3 }'`
+
+nvme read $FQA_DEVICE -n 1 -z 4 -c 999
+nvme read $FQA_DEVICE -n 1 -z 4 -c 1998
+nvme read $FQA_DEVICE -n 1 -z 4 -c 999
+
+nvme smart-log $FQA_DEVICE > smart.tmp
+DATA_UNIT_RD_NEW=`cat smart.tmp | grep data_units_read | sed 's/,//g' | awk '{ print $3 }'`
+DATA_UNIT_WR_NEW=`cat smart.tmp | grep data_units_written | sed 's/,//g' | awk '{ print $3 }'`
+HOST_RD_CMDS_NEW=`cat smart.tmp | grep host_read_commands | sed 's/,//g' | awk '{ print $3 }'`
+HOST_WR_CMDS_NEW=`cat smart.tmp | grep host_write_commands | sed 's/,//g' | awk '{ print $3 }'`
+
+if [[ $((DATA_UNIT_RD_OLD+4)) != $DATA_UNIT_RD_NEW ]]; then
+  echo "expected <$((DATA_UNIT_RD_OLD+4))>, but was <$DATA_UNIT_RD_NEW>"
+fi
+
+if [[ $((DATA_UNIT_WR_OLD)) != $DATA_UNIT_WR_NEW ]]; then
+  echo "expected <$((DATA_UNIT_WR_OLD))>, but was <$DATA_UNIT_WR_NEW>"
+fi
+
+if [[ $((HOST_RD_CMDS_OLD+4)) != $HOST_RD_CMDS_NEW ]]; then
+  echo "expected <$((HOST_RD_CMDS_OLD+4))>, but was <$HOST_RD_CMDS_NEW>"
+fi
+
+if [[ $((HOST_WR_CMDS_OLD)) != $HOST_WR_CMDS_NEW ]]; then
+  echo "expected <$((HOST_WR_CMDS_OLD))>, but was <$HOST_WR_CMDS_NEW>"
+fi
+
+rm -f smart.tmp

@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+source ../../../common > /dev/null 2>&1
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+nvme create-ns $FQA_DEVICE -s 0xC000000 -c 0xC000000 -f 0 -d 0 -m 0
+nvme create-ns $FQA_DEVICE -s 0xC000000 -c 0xC000000 -f 0 -d 0 -m 0
+nvme create-ns $FQA_DEVICE -s 0xC000000 -c 0xC000000 -f 0 -d 0 -m 0
+
+nvme delete-ns $FQA_DEVICE -n 1
+nvme delete-ns $FQA_DEVICE -n 3
+
+nvme create-ns $FQA_DEVICE -s 0x20000000 -c 0x20000000 -f 0 -d 0 -m 0
+# expected map segment allocation:
+# ns 1 : 0 2 3 4
+# ns 2 : 1
+
+# TODO: check map segment allocation
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+nvme attach-ns $FQA_DEVICE -n 2 -c $CTRL_ID
+nvme list-ns $FQA_DEVICE
+
+rescan-ns
+
+# write an lba
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -s 0x1FFFFF -c 0 -z 4
+echo "dcba" | nvme write $FQA_DEVICE -n 1 -s 0x200000 -c 0 -z 4
+
+# read the lba
+nvme read $FQA_DEVICE -n 1 -s 0x1FFFFF -c 0 -z 4 | xxd -p -l 4
+nvme read $FQA_DEVICE -n 1 -s 0x200000 -c 0 -z 4 | xxd -p -l 4
+
+# deallocate the lbas(1KB)
+nvme dsm $FQA_DEVICE -n 1 -s 0x1FFFFF -b 2 -ad
+
+# read the lba(should be ffffffff)
+nvme read $FQA_DEVICE -n 1 -s 0x1FFFFF -c 0 -z 4 | xxd -p -l 4
+nvme read $FQA_DEVICE -n 1 -s 0x200000 -c 0 -z 4 | xxd -p -l 4

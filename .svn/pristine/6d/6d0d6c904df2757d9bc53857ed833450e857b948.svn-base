@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+nvme create-ns $FQA_DEVICE -s 0x1000000 -c 0x1000000 -f 0
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+
+rescan-ns
+
+ipcrm -M 830 &> /dev/null
+
+nbio read_write.4096 -q &
+nbio_pid=$!
+
+for i in {1..10}; do
+  kill -0 $nbio_pid
+  res=$?
+  if [[ $res != 0 ]]; then
+    echo "nbio stopped!"
+    exit 1
+  fi
+#  sleep 30
+  nvme fw-download $FQA_DEVICE -f $FW_BINARY
+  nvme fw-commit $FQA_DEVICE -a 3
+done
+
+kill -0 $nbio_pid
+echo $?
+
+disown $nbio_pid
+kill -9 $nbio_pid
+
+du error.log
+
+rescan-ns

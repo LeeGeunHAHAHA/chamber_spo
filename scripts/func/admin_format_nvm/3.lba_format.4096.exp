@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+# initialize
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+delete-ns: Success, deleted nsid:-1
+
+nvme create-ns $FQA_DEVICE -s 0x100000 -c 0x100000
+create-ns: Success, created nsid:1
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+attach-ns: Success, nsid:1
+
+# lba format
+nvme format $FQA_DEVICE -n 1 -l 0
+Success formatting namespace:1
+nvme id-ns $FQA_DEVICE -n 1 | grep -e 'flbas' -e 'in use'
+flbas   : 0
+lbaf  0 : ms:0   lbads:12 rp:0 (in use)
+rescan-ns
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -s 0 -c 0 -z 4
+Rounding data size to fit block count (4096 bytes)
+write: Success
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (4096 bytes)
+read: Success
+61626364
+
+nvme format $FQA_DEVICE -n 1 -l 1
+Success formatting namespace:1
+nvme id-ns $FQA_DEVICE -n 1 | grep -e 'flbas' -e 'in use'
+flbas   : 0x1
+lbaf  1 : ms:8   lbads:12 rp:0x1 (in use)
+rescan-ns
+echo "zxcv1234" | nvme write $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 -y 4
+Rounding data size to fit block count (4096 bytes)
+write: Success
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 -y 4 | xxd -p -l 4
+Rounding data size to fit block count (4096 bytes)
+read: Success
+7a786376
+
+nvme format $FQA_DEVICE -n 1 -l 2
+Success formatting namespace:1
+nvme id-ns $FQA_DEVICE -n 1 | grep -e 'flbas' -e 'in use'
+flbas   : 0x2
+lbaf  2 : ms:64  lbads:12 rp:0x2 (in use)
+rescan-ns
+echo "abcd1234" | nvme write $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 -y 4
+Rounding data size to fit block count (4096 bytes)
+write: Success
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 -y 4 | xxd -p -l 4
+Rounding data size to fit block count (4096 bytes)
+read: Success
+61626364
+
+# extended lba
+nvme format $FQA_DEVICE -n 1 -l 1 -m 1
+Success formatting namespace:1
+nvme id-ns $FQA_DEVICE -n 1 | grep -e 'flbas' -e 'in use'
+flbas   : 0x11
+lbaf  1 : ms:8   lbads:12 rp:0x1 (in use)
+rescan-ns
+echo "zxcv1234" | nvme write $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 -y 4
+Rounding data size to fit block count (4096 bytes)
+write: Success
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 -y 4 | xxd -p -l 4
+Rounding data size to fit block count (4096 bytes)
+read: Success
+7a786376
+
+nvme format $FQA_DEVICE -n 1 -l 2 -m 1
+Success formatting namespace:1
+nvme id-ns $FQA_DEVICE -n 1 | grep -e 'flbas' -e 'in use'
+flbas   : 0x12
+lbaf  2 : ms:64  lbads:12 rp:0x2 (in use)
+rescan-ns
+echo "zxcv1234" | nvme write $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 -y 4
+Rounding data size to fit block count (4096 bytes)
+write: Success
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 -y 4 | xxd -p -l 4
+Rounding data size to fit block count (4096 bytes)
+read: Success
+7a786376
+
+# error(invalid lba format)
+nvme format $FQA_DEVICE -n 1 -l 3
+command error: SC a SCT 1
+NVME Admin command error:INVALID_FORMAT: The LBA Format specified is not supported. This may be due to various conditions(10a)
+nvme id-ns $FQA_DEVICE -n 1 | grep -e 'flbas' -e 'in use'
+flbas   : 0x12
+lbaf  2 : ms:64  lbads:12 rp:0x2 (in use)
+
+nvme create-ns $FQA_DEVICE -s 0x100000 -c 0x100000
+create-ns: Success, created nsid:2
+nvme attach-ns $FQA_DEVICE -n 2 -c $CTRL_ID
+attach-ns: Success, nsid:2
+
+rescan-ns
+
+# flbas 0
+nvme format $FQA_DEVICE -n 2 -l 0
+Success formatting namespace:2
+nvme id-ns $FQA_DEVICE -n 2 | grep -e 'flbas' -e 'in use'
+flbas   : 0
+lbaf  0 : ms:0   lbads:12 rp:0 (in use)
+rescan-ns
+echo "vcxz" | nvme write $FQA_DEVICE -n 2 -s 0 -c 0 -z 4 -y 4
+Rounding data size to fit block count (4096 bytes)
+write: Success
+nvme read $FQA_DEVICE -n 2 -s 0 -c 0 -z 4 -y 4 | xxd -p -l 4
+Rounding data size to fit block count (4096 bytes)
+read: Success
+7663787a
+
+# flbas 2
+nvme id-ns $FQA_DEVICE -n 1 | grep -e 'flbas' -e 'in use'
+flbas   : 0x12
+lbaf  2 : ms:64  lbads:12 rp:0x2 (in use)

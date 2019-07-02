@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+# initiate controller reset
+rescan-ns
+
+# all entries are empty
+nvme error-log $FQA_DEVICE -e 1 | grep "error_count"
+error_count  : 0
+
+# error
+nvme create-ns $FQA_DEVICE -s 0x1000000000 -c 0x1000000000
+command error: SC 15 SCT 1
+NVMe Status:NS_INSUFFICIENT_CAPACITY: Creating the namespace requires more free space than is currently available. The Command Specific Information field of the Error Information Log specifies the total amount of NVM capacity required to create the namespace in bytes(115)
+
+check_aerc
+Asynchronous Event Type: Error Status(0)
+Asynchronous Event Info: Transient Internal Error(4)
+
+# 1 entry
+ERROR_COUNT_OLD=`nvme error-log $FQA_DEVICE -e 1 | grep "error_count" | awk '{ print $3 }'`
+
+# error
+nvme create-ns $FQA_DEVICE -s 0x1000000000 -c 0x1000000000
+command error: SC 15 SCT 1
+NVMe Status:NS_INSUFFICIENT_CAPACITY: Creating the namespace requires more free space than is currently available. The Command Specific Information field of the Error Information Log specifies the total amount of NVM capacity required to create the namespace in bytes(115)
+
+check_aerc
+Asynchronous Event Type: Error Status(0)
+Asynchronous Event Info: Transient Internal Error(4)
+
+# 2 entries
+ERROR_COUNT_NEW=`nvme error-log $FQA_DEVICE -e 1 | grep "error_count" | awk '{ print $3 }'`
+
+if [[ $((ERROR_COUNT_OLD+1)) != $ERROR_COUNT_NEW ]]; then
+  echo "expected <$((ERROR_COUNT_OLD+1))>, but was <$ERROR_COUNT_NEW>"
+fi
+
+# initiate controller reset
+rescan-ns
+
+# all entries are empty
+nvme error-log $FQA_DEVICE -e 1 | grep "error_count"
+error_count  : 0
+

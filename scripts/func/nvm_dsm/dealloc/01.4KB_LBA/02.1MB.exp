@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+source ../../../common > /dev/null 2>&1
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+delete-ns: Success, deleted nsid:-1
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000 -f $FLBAS_4096 -d 0 -m 0
+create-ns: Success, created nsid:1
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+attach-ns: Success, nsid:1
+nvme list-ns $FQA_DEVICE
+[   0]:0x1
+
+rescan-ns
+
+# write lbas
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -s 0 -c 0 -z 4
+Rounding data size to fit block count (4096 bytes)
+write: Success
+echo "dcba" | nvme write $FQA_DEVICE -n 1 -s 255 -c 0 -z 4
+Rounding data size to fit block count (4096 bytes)
+write: Success
+
+# read the lbas
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (4096 bytes)
+read: Success
+61626364
+nvme read $FQA_DEVICE -n 1 -s 255 -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (4096 bytes)
+read: Success
+64636261
+
+# deallocate the lbas(1MB)
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 256 -ad
+NVMe DSM: success
+
+# read the lbas(should be ffffffff)
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (4096 bytes)
+read: Success
+ffffffff
+nvme read $FQA_DEVICE -n 1 -s 255 -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (4096 bytes)
+read: Success
+ffffffff

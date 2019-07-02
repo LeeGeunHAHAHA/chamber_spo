@@ -1,0 +1,22 @@
+[1;31m[[1;32mSPOR Test Slot No.4 (0000:08:00.0)[1;31m][0m
+/root/fqa/trunk/spor/2.spor_w_write/run_if: line 25: ../common_if: No such file or directory
+/root/fqa/trunk/spor/2.spor_w_write/run_if: line 26: ../parser_plp.sh: No such file or directory
+/root/fqa/trunk/spor/2.spor_w_write/run_if: line 57: group_init: command not found
+rm: cannot remove './hex_log/plp_time_log_0000:08:00.0': No such file or directory
+/root/fqa/trunk/spor/2.spor_w_write/run_if: line 66: power_off: command not found
+/root/fqa/trunk/spor/2.spor_w_write/run_if: line 67: reset_spdk: command not found
+/root/fqa/trunk/spor/2.spor_w_write/run_if: line 68: power_on: command not found
+/root/fqa/trunk/spor/2.spor_w_write/run_if: line 69: enable_spdk: command not found
+/root/fqa/trunk/spor/2.spor_w_write/run_if: line 71: run_config: command not found
+/root/fqa/trunk/spor/2.spor_w_write/run_if: line 72: clean_journal: command not found
+/root/fqa/trunk/spor/2.spor_w_write/run_if: line 73: format_4k: command not found
+/root/fqa/trunk/spor/2.spor_w_write/run_if: line 87: ${LOG_FILE}: ambiguous redirect
+
+
+*********************** [1/10000] ***********************
+
+
+/root/fqa/trunk/fqa_test_script/send_current_status.sh: line 12: sshpass: command not found
+/root/fqa/trunk/spor/2.spor_w_write/run_if: line 120: run_test: command not found
+*** nbio running on background (pid ) ***
+*** sudden power off after 19 secs***

@@ -1,0 +1,24 @@
+# nvme function testcases
+
+# admin commands
+admin_async_event/test.lst                      # asynchronous event request command
+admin_format_nvm/test.4096.lst                       # format nvm command
+admin_fw_commit/test.4096.lst
+admin_fw_download/test.lst                      # firmware download command
+admin_get_log/test.4096.lst			                # get log pages command
+admin_identify/test.4096.lst                         # identify command
+admin_ns_mgmt/test.4096.lst                          # namespace management command
+
+# atomic write
+atomic_write/test.lst
+
+# nvm commands
+nvm_dsm/test.lst                                # dataset management command
+nvm_write_uncor/test.lst                        # write uncorrectable
+nvm_write_zeroes/test.lst                       # write zeroes
+
+# reset/shutdown
+#reset/test.lst
+#shutdown/test.lst
+
+

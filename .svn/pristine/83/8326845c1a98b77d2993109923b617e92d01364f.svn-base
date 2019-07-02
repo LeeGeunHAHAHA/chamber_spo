@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+source ../../common > /dev/null 2>&1
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+delete-ns: Success, deleted nsid:-1
+nvme create-ns $FQA_DEVICE -s 0x3000000 -c 0x3000000 -f $FLBAS_4096 -d 0 -m 0
+create-ns: Success, created nsid:1
+nvme create-ns $FQA_DEVICE -s 0x3000000 -c 0x3000000 -f $FLBAS_4096 -d 0 -m 0
+create-ns: Success, created nsid:2
+nvme create-ns $FQA_DEVICE -s 0x3000000 -c 0x3000000 -f $FLBAS_4096 -d 0 -m 0
+create-ns: Success, created nsid:3
+
+nvme delete-ns $FQA_DEVICE -n 1
+delete-ns: Success, deleted nsid:1
+nvme delete-ns $FQA_DEVICE -n 3
+delete-ns: Success, deleted nsid:3
+
+nvme create-ns $FQA_DEVICE -s 0x8000000 -c 0x8000000 -f $FLBAS_4096 -d 0 -m 0
+create-ns: Success, created nsid:1
+# expected map segment allocation:
+# ns 1 : 0 2 3 4
+# ns 2 : 1
+
+# TODO: check map segment allocation
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+attach-ns: Success, nsid:1
+nvme attach-ns $FQA_DEVICE -n 2 -c $CTRL_ID
+attach-ns: Success, nsid:2
+nvme list-ns $FQA_DEVICE
+[   0]:0x1
+[   1]:0x2
+
+rescan-ns
+
+# TODO: remove below lines if the newly created namespace is filled with unwritten lba
+nvme dsm $FQA_DEVICE -n 1 -s 0x3ff00 -b 0x200 -ad
+NVMe DSM: success
+
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -s 0x3FFFF -c 0 -z 4
+Rounding data size to fit block count (4096 bytes)
+write: Success
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -s 0x40000 -c 0 -z 4
+Rounding data size to fit block count (4096 bytes)
+write: Success
+
+# read the lba
+nvme read $FQA_DEVICE -n 1 -s 0x3FFFF -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (4096 bytes)
+read: Success
+61626364
+nvme read $FQA_DEVICE -n 1 -s 0x40000 -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (4096 bytes)
+read: Success
+61626364
+
+# write zeroes(2LBAs, 8KB)
+nvme write-zeroes $FQA_DEVICE -n 1 -s 0x3FFFF -c 1
+NVME Write Zeroes Success
+
+# read the lba(should be zeroes)
+nvme read $FQA_DEVICE -n 1 -s 0x3FFFF -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (4096 bytes)
+read: Success
+00000000
+nvme read $FQA_DEVICE -n 1 -s 0x40000 -c 0 -z 4 | xxd -p -l 4
+Rounding data size to fit block count (4096 bytes)
+read: Success
+00000000

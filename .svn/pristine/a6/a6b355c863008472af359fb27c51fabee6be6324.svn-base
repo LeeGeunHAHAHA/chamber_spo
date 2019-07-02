@@ -1,0 +1,78 @@
+#!/bin/bash
+DEV=$FQA_DEVICE
+
+function setup_help()
+{
+	echo "usage: $0 [option]"
+	echo "			1	->	4KB"
+	echo "			2	->	512B"
+	echo "			3	->	4KB 	+ 8B separted buffer"
+	echo "			4	->	512KB 	+ 8B separted buffer"
+	echo "			5	->	4KB 	+ 8B separted buffer, data protection type 1"
+	echo "			6	->	512KB 	+ 8B separted buffer, data protection type 1"
+	echo "			7	->	4KB 	+ 8B separted buffer, data protection type 2"
+	echo "			8	->	512KB 	+ 8B separted buffer, data protection type 2"
+	echo "example) $0 1"
+}
+
+if [ $# -eq 1 ]; then
+	if [ $1 -gt 0 -a $1 -lt 9 ]; then
+		killall prim_proc
+		../tools/prim_proc/prim_proc&
+		sleep 1
+
+		CTRL_ID=$(nvme id-ctrl $DEV | grep cntlid | awk '{print $3}')
+
+		nsbytes=`nvme id-ctrl $DEV | grep tnvmcap | awk 'BEGIN {OFMT="%.0f"} {GB=1024*1024*1024;ns_size=(int($3/GB)*GB);print ns_size;}'`
+		lba4k_nscap=`awk 'BEGIN {OFMT="%.0f"; print '$nsbytes'/4096}'`
+		lba512b_nscap=`awk 'BEGIN {OFMT="%.0f"; print '$nsbytes'/512}'`
+
+		./longrun_45m clean > /dev/null
+
+		nvme delete-ns $DEV -n 0xffffffff								# delete all namespaces
+	
+		case $1 in
+			1)
+				nvme create-ns $DEV -s $lba4k_nscap   -c $lba4k_nscap   -f 2		# 4kb
+				echo "Formatted to 4KB"
+				;;
+			2)
+				nvme create-ns $DEV -s $lba512b_nscap -c $lba512b_nscap -f 0		# 512b
+				echo "Formatted to 512B"
+				;;
+			3)
+				nvme create-ns $DEV -s $lba4k_nscap   -c $lba4k_nscap   -f 3		# 4kb + 8b,  separted buffer
+				echo "Formatted to 4KB + 8B"
+				;;
+			4)
+				nvme create-ns $DEV -s $lba512b_nscap -c $lba512b_nscap -f 1		# 512b + 8b, separted buffer
+				echo "Formatted to 512B + 8B"
+				;;
+			5)
+				nvme create-ns $DEV -s $lba4k_nscap   -c $lba4k_nscap   -f 3 -d 9	# 4kb + 8b,  separted buffer, data protection type 1
+				echo "Formatted to 4KB + 8B, protection type 1"
+				;;
+			6)
+				nvme create-ns $DEV -s $lba512b_nscap -c $lba512b_nscap -f 1 -d 9	# 512b + 8b, separted buffer, data protection type 1
+				echo "Formatted to 512B + 8B, protection type 1"
+				;;
+			7)
+				nvme create-ns $DEV -s $lba4k_nscap   -c $lba4k_nscap   -f 3 -d 10	# 4kb + 8b,  separted buffer, data protection type 2
+				echo "Formatted to 4KB + 8B, protection type 2"
+				;;
+			8)
+				nvme create-ns $DEV -s $lba512b_nscap -c $lba512b_nscap -f 1 -d 10	# 512b + 8b, separted buffer, data protection type 2
+				echo "Formatted to 512B + 8B, protection type 2"
+				;;
+		esac
+		
+		nvme attach-ns $DEV -n 1 -c $CTRL_ID
+
+		killall prim_proc
+	else
+		setup_help
+	fi
+else
+	setup_help
+fi
+

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+# initialize
+./initialize
+
+rescan-ns
+
+# create a namespace
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 0 -m 0
+
+# not attached namespace
+nvme detach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+
+# invalid controller id
+nvme attach-ns $FQA_DEVICE -n 1 -c 32
+nvme attach-ns $FQA_DEVICE -n 1 -c 128
+nvme detach-ns $FQA_DEVICE -n 1 -c 32
+nvme detach-ns $FQA_DEVICE -n 1 -c 128
+
+# duplicated controller id
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID,$CTRL_ID
+
+# not attached controller
+nvme detach-ns $FQA_DEVICE -n 1 -c $((CTRL_ID+1))
+
+nvme error-log $FQA_DEVICE -e 7 | grep -v 'error_count' | grep -v 'cmdid'

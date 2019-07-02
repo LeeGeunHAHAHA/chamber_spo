@@ -1,0 +1,46 @@
+#!/bin/bash
+FQA_TRUNK_DIR=~/fqa/trunk
+IMAGE_NAME=bravo_fw.bin
+
+FW_BINARY=$FQA_TRUNK_DIR/$IMAGE_NAME
+#FW_BINARY=~/wsl.bin
+
+#CTRL_ID=1
+CTRL_ID=$(nvme id-ctrl $FQA_DEVICE | grep cntlid | awk '{print $3}')
+
+#MAX_NS=32
+MAX_NS=$(nvme id-ctrl $FQA_DEVICE | grep nn | awk '{print $3}')
+
+#TEST_NS=16
+TEST_NS=$((MAX_NS/2))
+
+NVME_CLI=/usr/sbin/nvme
+NVME_DEV=/dev/nvme0
+
+init()
+{
+  killall prim_proc 2&> /dev/null
+  sleep 1
+  `dirname \`which nvme\``/../prim_proc/prim_proc &
+  sleep 1
+}
+
+check_aerc()
+{
+  killall prim_proc -SIGUSR1
+  sleep 1
+}
+
+spdk_to_nvme()
+{
+  sleep 1
+  `dirname \`which nvme\``/../../setup.sh reset
+  sleep 1
+}
+
+nvme_to_spdk()
+{
+  sleep 1
+  `dirname \`which nvme\``/../../setup.sh
+  sleep 1
+}

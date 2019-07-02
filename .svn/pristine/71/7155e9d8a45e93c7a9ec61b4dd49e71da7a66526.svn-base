@@ -1,0 +1,3 @@
+# atomic write test
+disabled            # atomic write disabled
+enabled             # atomic write enabled

@@ -1,0 +1,74 @@
+# initialize
+./initialize
+delete-ns: Success, deleted nsid:-1
+allocated nvm capacitiy is 0GB(0B)
+
+# protection information is not enabled
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 2 -d 0 -m 0
+create-ns: Success, created nsid:1
+nvme id-ns $FQA_DEVICE -n 1 -f | grep dps
+dps     : 0
+
+# protection information is enabled, Type 1
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 3 -d 1 -m 0
+create-ns: Success, created nsid:2
+nvme id-ns $FQA_DEVICE -n 2 -f | grep dps
+dps     : 0x1
+
+# protection information is enabled, Type 2
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 3 -d 2 -m 0
+create-ns: Success, created nsid:3
+nvme id-ns $FQA_DEVICE -n 3 -f | grep dps
+dps     : 0x2
+
+# protection information is enabled, Type 3
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 3 -d 3 -m 0
+create-ns: Success, created nsid:4
+nvme id-ns $FQA_DEVICE -n 4 -f | grep dps
+dps     : 0x3
+
+# protection information without metadata
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 2 -d 1 -m 0
+command error: SC a SCT 1
+NVMe Status:INVALID_FORMAT: The LBA Format specified is not supported. This may be due to various conditions(10a)
+nvme id-ns $FQA_DEVICE -n 5 -f | grep dps
+dps     : 0
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 2 -d 2 -m 0
+command error: SC a SCT 1
+NVMe Status:INVALID_FORMAT: The LBA Format specified is not supported. This may be due to various conditions(10a)
+nvme id-ns $FQA_DEVICE -n 6 -f | grep dps
+dps     : 0
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 2 -d 3 -m 0
+command error: SC a SCT 1
+NVMe Status:INVALID_FORMAT: The LBA Format specified is not supported. This may be due to various conditions(10a)
+nvme id-ns $FQA_DEVICE -n 7 -f | grep dps
+dps     : 0
+
+# metadata setting without metadata
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 2 -d 0 -m 0
+create-ns: Success, created nsid:5
+nvme id-ns $FQA_DEVICE -n 8 -f | grep flbas
+flbas   : 0
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 2 -d 1 -m 0
+command error: SC a SCT 1
+NVMe Status:INVALID_FORMAT: The LBA Format specified is not supported. This may be due to various conditions(10a)
+nvme id-ns $FQA_DEVICE -n 9 -f | grep flbas
+flbas   : 0
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 2 -d 2 -m 0
+command error: SC a SCT 1
+NVMe Status:INVALID_FORMAT: The LBA Format specified is not supported. This may be due to various conditions(10a)
+nvme id-ns $FQA_DEVICE -n 10 -f | grep flbas
+flbas   : 0
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 2 -d 3 -m 0
+command error: SC a SCT 1
+NVMe Status:INVALID_FORMAT: The LBA Format specified is not supported. This may be due to various conditions(10a)
+nvme id-ns $FQA_DEVICE -n 11 -f | grep flbas
+flbas   : 0
+
+# check namespace list
+nvme list-ns $FQA_DEVICE -a
+[   0]:0x1
+[   1]:0x2
+[   2]:0x3
+[   3]:0x4
+[   4]:0x5

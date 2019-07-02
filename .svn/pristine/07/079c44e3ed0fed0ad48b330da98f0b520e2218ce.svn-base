@@ -1,0 +1,5 @@
+#!/bin/bash
+
+export AMOUNT="time:20s"
+
+./longrun_45m $@

@@ -1,0 +1,10 @@
+# initialize
+./initialize
+
+# private namespace
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 0 -m 0
+nvme id-ns $FQA_DEVICE -n 1 | grep nmic
+
+# shared namespace
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 0 -m 1
+nvme id-ns $FQA_DEVICE -n 2 -f | grep nmic

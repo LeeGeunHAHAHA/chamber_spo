@@ -1,0 +1,403 @@
+#!/bin/bash
+NBIO=nbio
+NVME_CLI=nvme
+IOLOG_PREFIX=iolog-
+SMARTLOG_PREFIX=smartlog-
+ERRORLOG_PREFIX=errorlog-
+IOENGINE=spdk
+#IOENGINE=libaio
+PCI_ADDRESS=$FQA_DEVICE     # domain:bus:device:function
+PATH_FQA_TEST_SCRIPT=~/fqa/trunk/fqa_test_script
+PATH_GET_LOG=~/fqa/trunk/io/get_log
+
+if [[ -z $NBIO_NSID ]]; then
+  NSID=1
+else
+  NSID=$NBIO_NSID
+fi
+if [ $IOENGINE == "spdk" ]; then
+  CONTROLLER="$PCI_ADDRESS"
+  export FQA_SPDK=1
+else
+  CONTROLLER="/dev/nvme0"
+  export FQA_SPDK=0
+fi
+#JOURNAL_DIR=$PWD/$(dirname ${BASH_SOURCE[0]})
+#JOURNAL_FILE=$JOURNAL_DIR/nvme0n1.journal
+if [[ $FQA_TARGET == "native" ]]; then
+  JOURNAL_SHM=$((NSID+830))
+  COMPARE=true
+else
+  COMPARE=false
+fi
+
+AE_SAVE_CURSOR="\033[s"
+AE_RESTORE_CURSOR="\033[u"
+AE_CLEAR_EOL="\033[K"
+
+LIST=0
+CLEAN=0
+ARG=
+GROUP_NO=
+LOGDIR=$PWD
+CONFIGS=0
+
+# default values
+NAMESPACE_BSZ=4096
+MDTS=$((32 * NAMESPACE_BSZ))
+
+PASS="\033[32;1mpass\033[0m"
+FAIL="\033[31;1mfail\033[0m"
+
+function run_config()
+{
+  if skip_test; then
+    TEST_NO=$((TEST_NO + 1))
+    return 0
+  fi
+  if [ $CLEAN -eq 1 ]; then
+    TEST_NO=$((TEST_NO + 1))
+    return 0
+  fi
+
+  TITLE="configuration" print_title
+  if [ $LIST -eq 1 ]; then
+    TEST_NO=$((TEST_NO + 1))
+    return 0
+  fi
+
+  #format
+  printf "$PASS\n"
+  TEST_NO=$((TEST_NO + 1))
+}
+
+function group_init()
+{
+  GROUP_DIR=${PWD##*/}
+  GROUP_NO=(${GROUP_DIR//./ }[0])
+  ARG=$1
+
+  if [ ! -n "${TEST_NO+1}" ]; then
+    TEST_NO=0
+    echo "$GROUP_NO. $GROUP_TITLE"
+  fi
+
+  if [ -n "${CURDIR+1}" ]; then
+      LOGDIR=$CURDIR
+  fi
+
+  if [ $# -gt 0 ]; then
+    if [ "$1" == "list" ]; then
+      LIST=1
+      return
+    elif [ "$1" == "clean" ]; then
+      CLEAN=1
+      clean_logs
+      return
+    fi
+  fi
+
+  command -v $NVME_CLI >/dev/null    # check if the nvme-cli is installed
+  RET=$?
+  if [ $RET -ne 0 ]; then
+    echo "nvme-cli is not installed"
+    exit $RET
+  fi
+
+  if [[ $CONTROLLER == '/dev/nvme*' ]]; then
+    if [ ! -b "${CONTROLLER}n${NSID}" ]; then
+      echo "namespace '${CONTROLLER}n${NSID}' not found"
+      exit 1
+    fi
+  fi
+  NAMESPACE_BSZ=`$NVME_CLI id-ns $CONTROLLER -n $NSID | awk '/in use/ { print $5 }' | awk -F ':' '{ print 2^$2 }'`
+  NAMESPACE_SIZE=$((NAMESPACE_BSZ * `$NVME_CLI id-ns $CONTROLLER -n $NSID | awk '/nsze/ { print $3 }'`))
+  NAMESPACE_SIZE_GB=$((NAMESPACE_SIZE/1024**3))
+  #MDTS=$((`$NVME_CLI id-ctrl $CONTROLLER | awk '/mdts/ { print 2^$3*4096 }'`))
+  MDTS=$((128 * 1024))
+  if [ $# -ge 1 ]; then
+    TEST_TO_RUN=$1
+  fi
+  LOGDIR="$LOGDIR/log"
+  mkdir $LOGDIR &> /dev/null
+}
+
+function print_title()
+{
+  TITLE_STR=`eval "echo -n $TITLE"`
+  if [ $LIST -eq 1 ]; then
+    printf " %02d. %s\n" $TEST_NO "$TITLE_PREFIX$TITLE_STR"
+  else
+    printf " %02d. %-70s ... " $TEST_NO "$TITLE_PREFIX$TITLE_STR"
+  fi
+}
+
+function clean_logs()
+{
+  rm -rf $PWD/log
+}
+
+
+
+function get_log_page_bg()
+{
+  cnt=0
+
+  sleep 5
+  while [ true ]
+  do
+    if [ $GROUP_NO -ne 11 ] || [ $GROUP_NO -ne 12 ]; then
+      ${PATH_FQA_TEST_SCRIPT}/get_log_page_set.sh $FQA_DEVICE $PATH_GET_LOG $ec_avg
+    else
+      ${PATH_FQA_TEST_SCRIPT}/get_log_page_set.sh $FQA_DEVICE $PATH_GET_LOG $cnt
+      cnt=$(echo ${cnt}+1 | bc)
+    fi
+    sleep 30
+  done
+}
+
+function run_nbio()
+{
+  if [ -n "${SUBTEST_NO+1}" ]; then
+    LOGSUFFIX="-$SUBTEST_NO"
+    SUBTEST_NO=$((SUBTEST_NO + 1))
+  fi
+  if [[ $MULTI_NS == "1" ]]; then
+    IOLOG_FILE="$LOGDIR/$IOLOG_PREFIX$PCI_ADDRESS"_"$TEST_NO$LOGSUFFIX"
+    SMARTLOG_FILE="$LOGDIR/$SMARTLOG_PREFIX$PCI_ADDRESS"_"$TEST_NO$LOGSUFFIX"
+    ERRORLOG_FILE="$LOGDIR/$ERRORLOG_PREFIX$PCI_ADDRESS"_"$TEST_NO$LOGSUFFIX"
+  else
+    IOLOG_FILE="$LOGDIR/$IOLOG_PREFIX$PCI_ADDRESS"_ns"$NSID"_"$TEST_NO$LOGSUFFIX"
+    SMARTLOG_FILE="$LOGDIR/$SMARTLOG_PREFIX$PCI_ADDRESS"_ns"$NSID"_"$TEST_NO$LOGSUFFIX"
+    ERRORLOG_FILE="$LOGDIR/$ERRORLOG_PREFIX$PCI_ADDRESS"_ns"$NSID"_"$TEST_NO$LOGSUFFIX"
+  fi
+  export IOENGINE=$IOENGINE
+  export IOLOG=$IOLOG_FILE
+  export SMARTLOG=$SMARTLOG_FILE
+  export ERRORLOG=$ERRORLOG_FILE
+  export CONTROLLER=$CONTROLLER
+  export NSID=$NSID
+  export JOURNAL_SHM=$JOURNAL_SHM
+  export COMPARE=$COMPARE
+  if [[ -z $AMOUNT ]]; then
+    export AMOUNT="time:10s"
+  fi
+  if [[ -z $AMOUNT_SCALE ]]; then
+    export AMOUNT_SCALE=1
+  fi
+
+  get_log_page_bg &
+  PID_TRACE=$!
+
+  $NBIO --display testcase $PARAM_FILE $@
+  RET=$?
+  if [ $RET -eq 1 ]; then
+    printf "abort\n"
+    exit $RET
+  elif [ $RET -gt 1 ]; then
+    printf "$FAIL\n"
+    if [ -s $ERRORLOG_FILE ]; then
+      echo "check the log '$ERRORLOG_FILE' for details"
+    fi
+    exit $RET
+  fi
+  if [ ! -s $ERRORLOG_FILE ]; then
+    # remove empty error log file
+    rm -f $ERRORLOG_FILE
+  fi
+
+  kill -9 $PID_TRACE
+}
+
+function skip_test()
+{
+  if [ -n "${TEST_TO_RUN+1}" ]; then
+    if [ $TEST_TO_RUN -eq $TEST_NO ]; then
+      return 1
+    fi
+    return 0
+  fi
+  return 1
+}
+
+function run_test()
+{
+  if skip_test; then
+    TEST_NO=$((TEST_NO + 1))
+    return 0
+  fi
+  if [ $CLEAN -eq 1 ]; then
+    TEST_NO=$((TEST_NO + 1))
+    return 0
+  fi
+
+  if [ $GROUP_NO -ne 11 ] && [ $GROUP_NO -ne 12 ]; then
+    $PATH_FQA_TEST_SCRIPT/send_current_status.sh $GROUP_NO. / $TEST_NO. $TITLE_PREFIX$TITLE_STR
+  fi
+  print_title
+  if [ $LIST -eq 1 ]; then
+    TEST_NO=$((TEST_NO + 1))
+    return 0
+  fi
+
+  if [ -n "${PRETEST_EVENT+1}" ]; then
+    $PRETEST_EVENT
+  fi
+
+  run_nbio
+ 
+  if [ -n "${POSTTEST_EVENT+1}" ]; then
+    $POSTTEST_EVENT
+  fi
+
+  printf "$PASS\n"
+  if [ ! -s $ERRORLOG_FILE ]; then
+    # remove empty error log file
+    rm -f $ERRORLOG_FILE
+  fi
+  TEST_NO=$((TEST_NO + 1))
+}
+
+log()
+{
+    now=`date '+%b %d %H:%M:%S'`
+    >&2 echo "$now $@"
+}
+
+function run_custom()
+{
+  if skip_test; then
+    TEST_NO=$((TEST_NO + 1))
+    return 0
+  fi
+  if [ $CLEAN -eq 1 ]; then
+    TEST_NO=$((TEST_NO + 1))
+    return 0
+  fi
+
+  print_title
+  if [ $LIST -eq 1 ]; then
+    TEST_NO=$((TEST_NO + 1))
+    return 0
+  fi
+
+  if [ -n "${PRETEST_EVENT+1}" ]; then
+    $PRETEST_EVENT
+  fi
+
+  TESTLOG_FILE=$LOGDIR/testlog-$TEST_NO
+  SUBTEST_NO=1
+  print_title > $TESTLOG_FILE
+  $@ 2>> $TESTLOG_FILE
+
+  RET=$?
+  if [ $RET -ne 0 ]; then
+    printf "$FAIL\n"
+    if [ -s $ERRORLOG_FILE ]; then
+      echo "check the log '$ERRORLOG_FILE' for details"
+    fi
+    exit $RET
+  fi
+
+  if [ -n "${POSTTEST_EVENT+1}" ]; then
+    $POSTTEST_EVENT
+  fi
+
+  printf "$PASS\n"
+  if [ ! -s $ERRORLOG_FILE ]; then
+    # remove empty error log file
+    rm -f $ERRORLOG_FILE
+  fi
+  TEST_NO=$((TEST_NO + 1))
+}
+
+function run_groups()
+{
+  CURDIR=$PWD
+  for group in "$@"
+  do
+    cd $CURDIR
+    cd $1
+    x()
+    {
+      source run $ARG
+    }
+    x
+  done
+  cd $CURDIR
+}
+
+function clean_journal()
+{
+  #rm -f $JOURNAL_FILE
+  ipcrm -M $JOURNAL_SHM &> /dev/null
+}
+
+function format()
+{
+  command -v $NVME_CLI >/dev/null    # check if the nvme-cli is installed
+  RET=$?
+  if [ $RET -ne 0 ]; then
+    echo "nvme-cli is not installed"
+    exit $RET
+  fi
+
+#  nvme format $NAMESPACE $1 --lbaf=3 >/dev/null
+  $NVME_CLI format $NAMESPACE $1 >/dev/null
+  RET=$?
+  if [ $RET -ne 0 ]; then
+    echo "namespace format failure"
+    exit $RET
+  fi
+  clean_journal
+}
+
+function shutdown_device()
+{
+  sync
+  rmmod nvme
+}
+
+function initialize_device()
+{
+  modprobe nvme retry_time=0
+
+  for ((sec=1; sec<=20; sec++))
+  do
+    if [ -b $NAMESPACE ]; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "namespace '$NAMESPACE' not found"
+  exit 1
+}
+
+function power_on()
+{
+  # TODO: power on
+
+  # re-enumerate pci bus
+  echo "1" > /sys/bus/pci/rescan
+  if [ ! -d /sys/bus/pci/devices/$PCI_ADDRESS ]; then
+    echo "pci device '$PCI_ADDRESS' not found"
+    exit 1
+  fi
+}
+
+function power_off()
+{
+  # TODO: power off
+
+  # remove the knowledge of the device
+  echo "1" > /sys/bus/pci/devices/$PCI_ADDRESS/remove
+}
+
+function register_config()
+{
+  CONFIG_NAME[CONFIGS]=$1
+  CONFIG_FUNC[CONFIGS]=$2
+  CONFIGS=$((CONFIGS+1))
+}
+

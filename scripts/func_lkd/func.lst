@@ -1,0 +1,19 @@
+# nvme function testcases
+
+# admin commands
+admin_intr_coalesce/admin_intr_coalesce.lst			        # get log pages command
+#admin_ns_mgmt/admin_ns_mgmt.lst                 # namespace management command
+#admin_identify/test.lst                         # identify command
+#admin_fw_update/admin_fw_update.lst native      # firmware download/commit command
+#admin_get_set_feature/admin_get_set_feature.lst
+
+# nvm commands
+#nvm_dsm/test.lst                                # dataset management command
+#nvm_write_uncor/test.lst                        # write uncorrectable
+#nvm_write_zeroes/test.lst                       # write zeroes
+
+# reset
+#reset/test.lst
+
+# atomic write
+#atomic_write/atomic_write.lst

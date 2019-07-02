@@ -1,0 +1,9 @@
+#!/bin/bash
+USER=admin
+PASSWORD=admin
+SPACE=NSD
+CONTENTS=`./report`
+TITLE="`date '+%F'` Block-level Test Report"
+SERVER=http://192.168.0.201:8090
+
+curl -u $USER:$PASSWORD -X POST -H 'Content-Type: application/json' -d'{"type":"page","title":"$TITLE","space":{"key":"SPACE"},"body":{"storage":{"value":"$CONTENTS","representation":"wiki"}}}' "$SERVER/confluence/rest/api/contentbody/convert/storage" | python -mjson.tool

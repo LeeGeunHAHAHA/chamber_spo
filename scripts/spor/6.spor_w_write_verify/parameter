@@ -1,0 +1,33 @@
+#!nbio
+stop_on_error=true
+stop_on_miscompare=true
+compare=${COMPARE}
+ioengine=${IOENGINE}
+controller=${CONTROLLER}
+nsid=${NSID}
+#journal_file=${JOURNAL_FILE}
+journal_shm=${JOURNAL_SHM}
+iolog=${IOLOG}
+#smartlog=${SMARTLOG}
+errorlog=${ERRORLOG}
+#iotrace=${IOTRACE}
+#unwr_read=dontcare
+unwr_read=value:1		# FADU
+#unwr_read=value:0		# Intel
+dealloc_read=value:1    # FADU
+#dealloc_read=value:0    # Intel
+
+iodepth=${IODEPTH}
+iosize=${IOSIZE}
+lba_range=${LBA_RANGE}
+slba=${SLBA}
+amount=${AMOUNT}
+seed=${SEED}
+operation=${OPERATION}
+prchk=7
+pract=0
+
+history=50000
+#timeout=1
+#stop_on_timeout=true
+slba_align=4k

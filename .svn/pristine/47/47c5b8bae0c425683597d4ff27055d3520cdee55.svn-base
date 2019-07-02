@@ -1,0 +1,35 @@
+#!/bin/bash
+DEV=$FQA_DEVICE
+
+killall prim_proc
+../tools/prim_proc/prim_proc&
+sleep 1
+
+nvme delete-ns $DEV -n 0xffffffff								# delete all namespaces
+
+./ns16_30m.sh clean > /dev/null
+
+CTRL_ID=$(nvme id-ctrl $DEV | grep cntlid | awk '{print $3}')
+
+nsbytes=`nvme id-ctrl $DEV | grep tnvmcap | awk 'BEGIN {OFMT="%.0f"} {GB=1024*1024*1024;ns_size=(int($3/8/GB)*GB);print ns_size;}'`
+lba4k_nscap=`awk 'BEGIN {OFMT="%.0f"; print '$nsbytes'/4096}'`
+
+nvme create-ns $DEV -s $lba4k_nscap   -c $lba4k_nscap   -f 2		# nsid 1.  4kb
+nvme create-ns $DEV -s $lba4k_nscap   -c $lba4k_nscap   -f 2		# nsid 3.  4kb (encrypted)
+nvme create-ns $DEV -s $lba4k_nscap   -c $lba4k_nscap   -f 3		# nsid 5.  4kb + 8b,  separted buffer
+nvme create-ns $DEV -s $lba4k_nscap   -c $lba4k_nscap   -f 3		# nsid 7.  4kb + 8b,  separted buffer(encrypted)
+nvme create-ns $DEV -s $lba4k_nscap   -c $lba4k_nscap   -f 3 -d 9	# nsid 9.  4kb + 8b,  separted buffer, data protection type 1
+nvme create-ns $DEV -s $lba4k_nscap   -c $lba4k_nscap   -f 3 -d 9	# nsid 11. 4kb + 8b,  separted buffer, data protection type 1(encrypted)
+nvme create-ns $DEV -s $lba4k_nscap   -c $lba4k_nscap   -f 3 -d 10	# nsid 13. 4kb + 8b,  separted buffer, data protection type 2
+nvme create-ns $DEV -s $lba4k_nscap   -c $lba4k_nscap   -f 3 -d 10	# nsid 15. 4kb + 8b,  separted buffer, data protection type 2(encrypted)
+
+nvme attach-ns $DEV -n 1 -c $CTRL_ID
+nvme attach-ns $DEV -n 2 -c $CTRL_ID
+nvme attach-ns $DEV -n 3 -c $CTRL_ID
+nvme attach-ns $DEV -n 4 -c $CTRL_ID
+nvme attach-ns $DEV -n 5 -c $CTRL_ID
+nvme attach-ns $DEV -n 6 -c $CTRL_ID
+nvme attach-ns $DEV -n 7 -c $CTRL_ID
+nvme attach-ns $DEV -n 8 -c $CTRL_ID
+
+killall prim_proc

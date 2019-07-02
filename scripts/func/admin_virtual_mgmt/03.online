@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+source lib
+
+SEC_DEVICE=`echo $FQA_DEVICE | sed 's/\.0/\.2/'`
+
+# initialize
+virtual_mgmt 0 $RESOURCE_TYPE_VQ $ACT_PRI_CTRL_ALLOC 0
+virtual_mgmt 0 $RESOURCE_TYPE_VI $ACT_PRI_CTRL_ALLOC 0
+
+# reset the primary controller to make all secondary controllers offline
+flr
+rescan-ns
+
+for i in `seq 1 15`; do
+  virtual_mgmt $i $RESOURCE_TYPE_VQ $ACT_SEC_CTRL_ASSIGN 0
+  virtual_mgmt $i $RESOURCE_TYPE_VI $ACT_SEC_CTRL_ASSIGN 0
+done
+
+flr
+rescan-ns
+id_prim_ctrl_cap
+nvme get-feature $FQA_DEVICE -f 7       # number of queueus
+lspci -vv -s $FQA_DEVICE | grep MSI-X   # number of interrupts
+id_sec_ctrl_list
+
+# failure: vq and vi are not assigned
+virtual_mgmt 1 0 $ACT_SEC_CTRL_ONLINE 0
+
+# failure: vi is not assigned
+virtual_mgmt 1 $RESOURCE_TYPE_VQ $ACT_SEC_CTRL_ASSIGN 1
+virtual_mgmt 1 0 $ACT_SEC_CTRL_ONLINE 0
+
+# failure: vq is not assigned
+virtual_mgmt 1 $RESOURCE_TYPE_VQ $ACT_SEC_CTRL_ASSIGN 0
+virtual_mgmt 1 $RESOURCE_TYPE_VI $ACT_SEC_CTRL_ASSIGN 1
+virtual_mgmt 1 0 $ACT_SEC_CTRL_ONLINE 0
+
+# success
+virtual_mgmt 1 $RESOURCE_TYPE_VQ $ACT_SEC_CTRL_ASSIGN 1
+virtual_mgmt 1 $RESOURCE_TYPE_VI $ACT_SEC_CTRL_ASSIGN 1
+virtual_mgmt 1 0 $ACT_SEC_CTRL_ONLINE 0
+id_sec_ctrl_list 1
+
+# success: already online
+virtual_mgmt 1 0 $ACT_SEC_CTRL_ONLINE 0
+
+# failure: vq/vi cannot be assigned in online
+virtual_mgmt 1 $RESOURCE_TYPE_VQ $ACT_SEC_CTRL_ASSIGN 0
+virtual_mgmt 1 $RESOURCE_TYPE_VQ $ACT_SEC_CTRL_ASSIGN 1
+virtual_mgmt 1 $RESOURCE_TYPE_VQ $ACT_SEC_CTRL_ASSIGN 2
+
+virtual_mgmt 1 $RESOURCE_TYPE_VI $ACT_SEC_CTRL_ASSIGN 0
+virtual_mgmt 1 $RESOURCE_TYPE_VI $ACT_SEC_CTRL_ASSIGN 1
+virtual_mgmt 1 $RESOURCE_TYPE_VI $ACT_SEC_CTRL_ASSIGN 2
+
+id_sec_ctrl_list 1
+
+# disable SR-IOV
+echo 0 > /sys/bus/pci/devices/$FQA_DEVICE/sriov_numvfs
+sleep 1
+
+# enable SR-IOV
+echo 1 > /sys/bus/pci/devices/$FQA_DEVICE/sriov_numvfs
+sleep 1
+
+rescan-ns
+echo $SEC_DEVICE
+nvme id-ctrl $SEC_DEVICE

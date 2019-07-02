@@ -1,0 +1,8 @@
+#!/bin/bash
+function config_400GB_precond()
+{
+  format 2
+  nbio --display testcase precondition
+}
+
+register_config "400GB_precond" config_400GB_precond

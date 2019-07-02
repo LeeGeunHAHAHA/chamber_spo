@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+source ../../common > /dev/null 2>&1
+
+# initialize
+nvme delete-ns $FQA_DEVICE -n 0xffffffff
+nvme create-ns $FQA_DEVICE -s 0x100000 -c 0x100000 -f $FLBAS_4096
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+
+rescan-ns
+
+# TODO: remove below lines if the newly created namespace is filled with unwritten lba
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 0x10100 -ad
+nvme dsm $FQA_DEVICE -n 1 -s 0x7ff00 -b 0x10100 -ad
+
+# write uncorrectable(to unwritten lba)
+nvme write-uncor $FQA_DEVICE -n 1 -s 0 -c 0xffff
+
+# read and verify - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4096 -d read_result
+nvme read $FQA_DEVICE -n 1 -s 0xffff -c 0 -z 4096 -d read_result
+
+# write data
+nvme write $FQA_DEVICE -n 1 -s 0x80000 -c 0 -z 4096 -d read_result
+
+# read and verify - success
+nvme read $FQA_DEVICE -n 1 -s 0x80000 -c 0 -z 4096 -d read_result
+
+# write uncorrectable(to written lba)
+nvme write-uncor $FQA_DEVICE -n 1 -s 0x80000 -c 0xffff
+
+# read and verify - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 0x80000 -c 0 -z 4096 -d read_result
+
+# write uncorrectable(again)
+nvme write-uncor $FQA_DEVICE -n 1 -s 0x80000 -c 0xffff                 # 0x80000 - 0x8ffff
+
+# read and verify - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 0x80000 -c 0 -z 4096 -d read_result
+
+# read neighborhood lbas - success
+nvme read $FQA_DEVICE -n 1 -s 0x7ffff -c 0 -z 4096 -d read_result
+nvme read $FQA_DEVICE -n 1 -s 0x90000 -c 0 -z 4096 -d read_result
+
+# read lba range including uncorrectable bla - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 0x7fff8 -c 0x10 -z 4096 -d read_result    # 0x7fff8 - 0x80008
+nvme read $FQA_DEVICE -n 1 -s 0x8ffff -c 0x10 -z 4096 -d read_result    # 0x8ffff - 0x9000f
+nvme read $FQA_DEVICE -n 1 -s 0x7ffff -c 1 -z 4096 -d read_result       # 0x7ffff, 0x80000
+nvme read $FQA_DEVICE -n 1 -s 0x8ffff -c 1 -z 4096 -d read_result       # 0x8ffff, 0x90000
+
+rm -f read_result

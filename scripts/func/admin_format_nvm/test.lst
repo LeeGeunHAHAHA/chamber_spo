@@ -1,0 +1,7 @@
+# format NVM command
+1.all_namespace
+2.per_namespace
+3.lba_format
+#4.protection_info
+#5.secure_erase
+#6.cryptographic_erase

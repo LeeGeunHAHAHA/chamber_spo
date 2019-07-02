@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+rescan-ns
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+delete-ns: Success, deleted nsid:-1
+for i in $(seq 1 $TEST_NS); do
+  nvme create-ns $FQA_DEVICE -s 0x4000 -c 0x4000 -f 0 -d 0 -m 0
+done
+create-ns: Success, created nsid:1
+create-ns: Success, created nsid:2
+create-ns: Success, created nsid:3
+create-ns: Success, created nsid:4
+create-ns: Success, created nsid:5
+create-ns: Success, created nsid:6
+create-ns: Success, created nsid:7
+create-ns: Success, created nsid:8
+create-ns: Success, created nsid:9
+create-ns: Success, created nsid:10
+create-ns: Success, created nsid:11
+create-ns: Success, created nsid:12
+create-ns: Success, created nsid:13
+create-ns: Success, created nsid:14
+create-ns: Success, created nsid:15
+create-ns: Success, created nsid:16

@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+source ../../../common > /dev/null 2>&1
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000 -f 2 -d 0 -m 0
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+nvme list-ns $FQA_DEVICE
+
+rescan-ns
+
+# no data change
+
+# write an lba
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -s 0 -c 0 -z 4
+
+# read the lba
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+
+# integral dataste for write
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 1 -w
+
+# read the lba
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+
+# integral dataste for read 
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 1 -r
+
+# read the lba
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+
+# integral dataste for read/write
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 1 -w -r
+
+# read the lba
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+
+# data change
+
+# integral dataste for read/write and deallocate
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 1 -w -r -ad
+
+# read the lba(should be ffffffff)
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+
+# write an lba
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -s 0 -c 0 -z 4
+
+# read the lba
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+
+# integral dataste for read and deallocate
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 1 -r -ad
+
+# read the lba(should be ffffffff)
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+
+# write an lba
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -s 0 -c 0 -z 4
+
+# read the lba
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+
+# integral dataste for write and deallocate
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 1 -w -ad
+
+# read the lba(should be ffffffff)
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+
+# write an lba
+echo "abcd" | nvme write $FQA_DEVICE -n 1 -s 0 -c 0 -z 4
+
+# read the lba
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+
+# deallocate
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 1 -ad
+
+# read the lba(should be ffffffff)
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 4 | xxd -p -l 4
+

@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+source ../../common > /dev/null 2>&1
+
+# initialize
+nvme delete-ns $FQA_DEVICE -n 0xffffffff
+nvme create-ns $FQA_DEVICE -s 0x100000 -c 0x100000 -f 0
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+
+rescan-ns
+
+nvme id-ns $FQA_DEVICE -n 1 | grep "in use"
+
+# TODO: remove below lines if the newly created namespace is filled with unwritten lba
+#echo 1 | nvme write $FQA_DEVICE -n 1 -s 0 -c 128 -z 1
+
+# write uncorrectable(to unwritten lba)
+nvme write-uncor $FQA_DEVICE -n 1 -s 0 -c 0
+
+# read and verify - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 0 -c 0 -z 512 -d read_result
+
+# write data
+nvme write $FQA_DEVICE -n 1 -s 10 -c 0 -z 512 -d read_result
+
+# read and verify - success
+nvme read $FQA_DEVICE -n 1 -s 10 -c 0 -z 512 -d read_result
+
+# write uncorrectable(to written lba)
+nvme write-uncor $FQA_DEVICE -n 1 -s 10 -c 0
+
+# read and verify - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 10 -c 0 -z 512 -d read_result
+
+# write uncorrectable(again)
+nvme write-uncor $FQA_DEVICE -n 1 -s 10 -c 0
+
+# read and verify - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 10 -c 0 -z 512 -d read_result
+
+# read neighborhood lbas - success
+nvme read $FQA_DEVICE -n 1 -s 9 -c 0 -z 512 -d read_result
+nvme read $FQA_DEVICE -n 1 -s 11 -c 0 -z 512 -d read_result
+
+# read lba ranges including uncorrectable bla - unrecorvered read error(sc: 81h, sct: 2h)
+nvme read $FQA_DEVICE -n 1 -s 5 -c 10 -z 512 -d read_result         # 5 - 15
+nvme read $FQA_DEVICE -n 1 -s 10 -c 10 -z 512 -d read_result        # 10 - 20
+nvme read $FQA_DEVICE -n 1 -s 9 -c 1 -z 512 -d read_result          # 9, 10
+nvme read $FQA_DEVICE -n 1 -s 10 -c 1 -z 512 -d read_result         # 10, 11
+
+# write data
+nvme write $FQA_DEVICE -n 1 -s 10 -c 0 -z 512 -d read_result
+
+# read lba ranges again - success
+nvme read $FQA_DEVICE -n 1 -s 5 -c 10 -z 512 -d read_result         # 5 - 15
+nvme read $FQA_DEVICE -n 1 -s 10 -c 10 -z 512 -d read_result        # 10 - 20
+nvme read $FQA_DEVICE -n 1 -s 9 -c 1 -z 512 -d read_result          # 9, 10
+nvme read $FQA_DEVICE -n 1 -s 10 -c 1 -z 512 -d read_result         # 10, 11
+
+rm -f read_result

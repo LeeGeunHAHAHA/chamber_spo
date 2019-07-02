@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+MPSMIN=`nvme show-regs $FQA_DEVICE | grep MPSMIN | awk '{ print $6}'`
+MDTS=`nvme id-ctrl $FQA_DEVICE | grep mdts | awk '{ print $3}'`
+MAX_TRANS_SIZE=$(($MPSMIN * $((2**$MDTS))))
+echo $MAX_TRANS_SIZE
+524288
+
+# 512B
+nvme fw-download $FQA_DEVICE -f $FW_BINARY -x 512
+Firmware download success
+
+# 1KB
+nvme fw-download $FQA_DEVICE -f $FW_BINARY -x 1024
+Firmware download success
+
+# 2KB
+nvme fw-download $FQA_DEVICE -f $FW_BINARY -x 2048
+Firmware download success
+
+# 4KB
+nvme fw-download $FQA_DEVICE -f $FW_BINARY -x 4096
+Firmware download success
+
+# 8KB
+nvme fw-download $FQA_DEVICE -f $FW_BINARY -x 8192
+Firmware download success
+
+# 16KB
+nvme fw-download $FQA_DEVICE -f $FW_BINARY -x 16384
+Firmware download success
+
+# 32KB
+nvme fw-download $FQA_DEVICE -f $FW_BINARY -x 32768
+Firmware download success
+
+# 64KB
+nvme fw-download $FQA_DEVICE -f $FW_BINARY -x 65536
+Firmware download success
+
+# 128KB
+nvme fw-download $FQA_DEVICE -f $FW_BINARY -x 131072
+Firmware download success
+
+# 256KB
+nvme fw-download $FQA_DEVICE -f $FW_BINARY -x 262144
+Firmware download success
+
+# 512KB
+nvme fw-download $FQA_DEVICE -f $FW_BINARY -x 524288
+Firmware download success
+
+# 1MB
+nvme fw-download $FQA_DEVICE -f $FW_BINARY -x 1048576
+command error: SC 2 SCT 0
+NVME Admin command error:INVALID_FIELD: A reserved coded value or an unsupported value in a defined field(2)
+
+# 1MB+4KB > MDTS
+nvme fw-download $FQA_DEVICE -f $FW_BINARY -x 1052672
+command error: SC 2 SCT 0
+NVME Admin command error:INVALID_FIELD: A reserved coded value or an unsupported value in a defined field(2)
+
+# 2MB > MDTS
+nvme fw-download $FQA_DEVICE -f $FW_BINARY -x 2097152
+command error: SC 2 SCT 0
+NVME Admin command error:INVALID_FIELD: A reserved coded value or an unsupported value in a defined field(2)

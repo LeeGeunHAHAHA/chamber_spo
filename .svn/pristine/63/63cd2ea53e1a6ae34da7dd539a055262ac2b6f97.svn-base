@@ -1,0 +1,89 @@
+#!/bin/bash
+source ../common
+GROUP_TITLE="hotspot read test"
+PARAM_FILE=parameter
+REPEAT_COUNT=10
+
+function test1()
+{
+  RANDOM=$TEST_NO
+  for ((i=1; i<=REPEAT_COUNT; i++))
+  do
+    log "----- [$i/$REPEAT_COUNT] begin -----"
+    printf "[%3d/%3d] " $i $REPEAT_COUNT
+
+    BEGIN_GB=$((RANDOM % (NAMESPACE_SIZE_GB - 15)))
+    log "write well-known data pattern and read hot-spot: WRITE_RANGE=$BEGIN_GB""gb:15gb HOTSPOT_RANGE=$BEGIN_GB""gb:32mb READ_IOSIZE=32mb"
+    WRITE_RANGE="$BEGIN_GB""gb:15gb" HOTSPOT_RANGE="$BEGIN_GB""gb:32mb" READ_IOSIZE="32mb" run_nbio
+    log "complete!"
+
+    log "----- [$i/$REPEAT_COUNT] end -----"
+    printf "\033[10D$AE_CLEAR_EOL"
+  done
+}
+
+function test2()
+{
+  RANDOM=$TEST_NO
+  for ((i=1; i<=REPEAT_COUNT; i++))
+  do
+    log "----- [$i/$REPEAT_COUNT] begin -----"
+    printf "[%3d/%3d] " $i $REPEAT_COUNT
+
+    BEGIN_GB=$((RANDOM % (NAMESPACE_SIZE_GB - 15)))
+    HOTSPOT_BEGIN_GB=$((BEGIN_GB+1))
+    log "write well-known data pattern and read hot-spot: WRITE_RANGE=$BEGIN_GB""gb:15gb HOTSPOT_RANGE=$HOTSPOT_BEGIN_GB""gb:32mb READ_IOSIZE=4kb"
+    WRITE_RANGE="$BEGIN_GB""gb:15gb" HOTSPOT_RANGE="$HOTSPOT_BEGIN_GB""gb:4kb" READ_IOSIZE="4kb" run_nbio
+    log "complete!"
+
+    log "----- [$i/$REPEAT_COUNT] end -----"
+    printf "\033[10D$AE_CLEAR_EOL"
+  done
+}
+
+function test3()
+{
+  RANDOM=$TEST_NO
+  for ((i=1; i<=REPEAT_COUNT; i++))
+  do
+    log "----- [$i/$REPEAT_COUNT] begin -----"
+    printf "[%3d/%3d] " $i $REPEAT_COUNT
+
+    BEGIN_GB=$((RANDOM % (NAMESPACE_SIZE_GB - 15)))
+    HOTSPOT_BEGIN_MB=$(((BEGIN_GB + 15) * 1024 - 32))
+    log "write well-known data pattern and read hot-spot: WRITE_RANGE=$BEGIN_GB""gb:16gb HOTSPOT_RANGE=$HOTSPOT_BEGIN_MB""mb:32mb READ_IOSIZE=32mb"
+    WRITE_RANGE="$BEGIN_GB""gb:15gb" HOTSPOT_RANGE="$HOTSPOT_BEGIN_MB""mb:32mb" READ_IOSIZE="32mb" run_nbio
+    log "complete!"
+
+    log "----- [$i/$REPEAT_COUNT] end -----"
+    printf "\033[10D$AE_CLEAR_EOL"
+  done
+}
+
+function test4()
+{
+  RANDOM=$TEST_NO
+  for ((i=1; i<=REPEAT_COUNT; i++))
+  do
+    log "----- [$i/$REPEAT_COUNT] begin -----"
+    printf "[%3d/%3d] " $i $REPEAT_COUNT
+
+    BEGIN_GB=$((RANDOM % (NAMESPACE_SIZE_GB - 15)))
+    HOTSPOT_BEGIN_KB=$(((BEGIN_GB + 15) * 1024 * 1024 - 4))
+    log "write well-known data pattern and read hot-spot: WRITE_RANGE=$BEGIN_GB""gb:16gb HOTSPOT_RANGE=$HOTSPOT_BEGIN_KB""kb:4kb READ_IOSIZE=4kb"
+    WRITE_RANGE="$BEGIN_GB""gb:15gb" HOTSPOT_RANGE="$HOTSPOT_BEGIN_KB""kb:4kb" READ_IOSIZE="4kb" run_nbio
+    log "complete!"
+
+    log "----- [$i/$REPEAT_COUNT] end -----"
+    printf "\033[10D$AE_CLEAR_EOL"
+  done
+}
+
+group_init $@
+
+run_config
+TITLE="closed block, reactive read reclaim" run_custom test1
+TITLE="closed block, proactive read reclaim" run_custom test2
+TITLE="open block, reactive read reclaim" run_custom test3
+TITLE="open block, proactive read reclaim" run_custom test4
+

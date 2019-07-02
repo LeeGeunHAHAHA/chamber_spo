@@ -1,0 +1,8 @@
+#!/bin/bash
+
+function config_3200GB()
+{
+  format 0
+}
+
+register_config "3200GB" config_3200GB

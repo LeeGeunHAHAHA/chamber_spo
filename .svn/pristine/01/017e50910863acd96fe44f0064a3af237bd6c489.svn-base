@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+spdk_to_nvme
+
+$NVME_CLI fw-download $NVME_DEV -f $FW_BINARY
+$NVME_CLI fw-commit $NVME_DEV -a 1
+
+$NVME_CLI reset $NVME_DEV
+
+$NVME_CLI fw-download $NVME_DEV -f $FW_BINARY
+$NVME_CLI fw-commit $NVME_DEV -a 1
+
+rmmod nvme      # controller shutdown
+modprobe nvme   # controller reset and initialize
+
+nvme_to_spdk

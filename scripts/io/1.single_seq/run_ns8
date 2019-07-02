@@ -1,0 +1,31 @@
+#!/bin/bash
+source ../common
+GROUP_TITLE="single operation sequential test(8 namespaces without 512B)"
+PARAM_FILE=parameter_ns8
+TITLE='OPERATION=$OPERATION SLBA=$SLBA IOSIZE=4KB_NS:$IOSIZE_4KB'
+SEED=1
+START=0
+NLBS=16
+MULTI_NS=1
+
+group_init $@
+
+run_config
+
+IOSIZE_512B=512
+for ((IOSIZE_4KB=4096;IOSIZE_4KB<=MDTS;IOSIZE_4KB+=4096))
+  do
+  LAST=$((START+NLBS))
+  OPERATION=write SLBA=seq:$START IOSIZE_4KB=$IOSIZE_4KB SEED=$SEED run_test
+  OPERATION=read SLBA=seq:$START IOSIZE_4KB=$IOSIZE_4KB   SEED=$SEED run_test
+
+  if [[ $IOSIZE_512B -lt $MDTS ]]; then
+    if [[ $IOSIZE_512B -lt 4096 ]]; then
+        IOSIZE_512B=$((IOSIZE_512B+512))
+    else
+        IOSIZE_512B=$((IOSIZE_512B+=4096))
+    fi
+  fi
+  START=$((START+NLBS))
+  SEED=$((SEED+1))
+done

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+gcc prim_cap_parse.c -o prim_cap_parse
+gcc sec_list_parse.c -o sec_list_parse

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+source ../../../common > /dev/null 2>&1
+
+nvme delete-ns $FQA_DEVICE -n 0xFFFFFFFF
+nvme create-ns $FQA_DEVICE -s 0x10000 -c 0x10000 -f 0 -d 0 -m 0
+nvme attach-ns $FQA_DEVICE -n 1 -c $CTRL_ID
+nvme list-ns $FQA_DEVICE
+
+rescan-ns
+
+# invalid length => zero length is allowed
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 0 -ad
+nvme dsm $FQA_DEVICE -n 1 -s 0x1000 -b 0 -ad
+
+# invalid starting lba
+nvme dsm $FQA_DEVICE -n 1 -s 0x10000 -b 0 -ad
+nvme dsm $FQA_DEVICE -n 1 -s 0x10000 -b 1 -ad
+nvme dsm $FQA_DEVICE -n 1 -s 0x10000 -b 1000 -ad
+nvme dsm $FQA_DEVICE -n 1 -s 0x20000 -b 1 -ad
+nvme dsm $FQA_DEVICE -n 1 -s 0x20000 -b 1000 -ad
+nvme dsm $FQA_DEVICE -n 1 -s 0x100000 -b 1 -ad
+nvme dsm $FQA_DEVICE -n 1 -s 0x100000 -b 1000 -ad
+
+# starting lba + length > namespace size
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 0x10001 -ad
+nvme dsm $FQA_DEVICE -n 1 -s 0 -b 0x20000 -ad
+nvme dsm $FQA_DEVICE -n 1 -s 0xF000 -b 0x1001 -ad
+nvme dsm $FQA_DEVICE -n 1 -s 0xF000 -b 0x2000 -ad

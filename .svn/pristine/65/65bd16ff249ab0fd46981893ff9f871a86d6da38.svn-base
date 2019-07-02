@@ -1,0 +1,88 @@
+#!/bin/bash
+
+source common
+
+UINT32=4
+
+function parse_subftl_health()
+{
+	echo "SubFTL - Bad Block Information"
+
+	total_bad=$(hexdump -v -e '/4 "%d\n"' -n $UINT32 -s 0 $1)
+	cxt_blks=$(hexdump -v -e '/4 "%d\n"' -n $UINT32 -s 4 $1)
+	cxt_bad=$(hexdump -v -e '/4 "%d\n"' -n $UINT32 -s 8 $1)
+	obj_bad=$(hexdump -v -e '/4 "%d\n"' -n $UINT32 -s 12 $1)
+
+	echo "Total Bad Blocks 	$total_bad"
+	echo "CXT Bad Blocks 	$cxt_bad"
+	echo "OBJ Bad Blocks 	$obj_bad"
+}
+
+function parse_subftl_ecnt()
+{
+	echo "SubFTL - Erase Count"
+
+	num_blk=$(hexdump -v -e '/4 "%d\n"' -n $UINT32 -s 0 $1)
+	echo "NUM BLOCKS $num_blk"
+
+	read_size=$((num_blk * $UINT32))
+	string=$(hexdump -v -e '/4 "%d\n"' -n $read_size -s 4 $1)
+	#echo $string
+
+	blk=0
+	array=(${string//' '/ })
+	for i in "${array[@]}"
+	do
+		#vu_read_buf[$blk]=$(printf "%d\n" $i)
+		echo [$blk] $i
+
+		blk=$((blk + 1))
+	done
+}
+
+function send_vu_subftl_health()
+{
+	VU_COMMON_OPCODE=0xC2
+	VU_SUB_OPCODE=0x80050001 #VU_SUB_OPCODE_GET_SUBFTL_HEALTH
+	DATA_LEN_BYTE=512
+	PARAM0=0x00
+	PARAM1=0X00
+	PARAM2=0X00
+	PARAM3=0X00
+	NDT=$[$DATA_LEN_BYTE/4]
+
+	SUBFTL_HEALTH_FILE=subftl_health.out
+
+	nvme io-passthru $FQA_DEVICE --opcode $VU_COMMON_OPCODE --namespace-id $NSID \
+	--cdw2=$VU_SUB_OPCODE --read --raw-binary --data-len=$DATA_LEN_BYTE --cdw10=$NDT \
+	--cdw12=$PARAM0 --cdw13=$PARAM1 --cdw14=$PARAM2 --cdw15=$PARAM3 > $SUBFTL_HEALTH_FILE
+
+	# Parse byte table
+	parse_subftl_health "$SUBFTL_HEALTH_FILE"
+	rm -rf "$SUBFTL_HEALTH_FILE"
+}
+
+function send_vu_subftl_ecnt()
+{
+	VU_COMMON_OPCODE=0xC2
+	VU_SUB_OPCODE=0x80050101 #VU_SUB_OPCODE_GET_SUBFTL_ECNT
+	DATA_LEN_BYTE=1024
+	PARAM0=0x00
+	PARAM1=0X00
+	PARAM2=0X00
+	PARAM3=0X00
+	NDT=$[$DATA_LEN_BYTE/4]
+
+	SUBFTL_ECNT_FILE=subftl_ecnt.out
+
+	nvme io-passthru $FQA_DEVICE --opcode $VU_COMMON_OPCODE --namespace-id $NSID \
+	--cdw2=$VU_SUB_OPCODE --read --raw-binary --data-len=$DATA_LEN_BYTE --cdw10=$NDT \
+	--cdw12=$PARAM0 --cdw13=$PARAM1 --cdw14=$PARAM2 --cdw15=$PARAM3 > $SUBFTL_ECNT_FILE
+
+	# Parse byte table
+	parse_subftl_ecnt "$SUBFTL_ECNT_FILE"
+	rm -rf "$SUBFTL_ECNT_FILE"
+}
+
+send_vu_subftl_health
+send_vu_subftl_ecnt

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+# initialize
+./initialize
+
+# create a namespace
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 2 -d 0 -m 0
+# check nvm capacity(1GB allocated)
+./show_alloc_space
+# check namespace 1
+nvme list-ns $FQA_DEVICE
+
+for i in $(seq 1 $((MAX_NS-1))); do
+  nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 2 -d 0 -m 0
+done
+
+# test maximum number of namespaces
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 2 -d 0 -m 0

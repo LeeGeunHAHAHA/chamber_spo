@@ -1,0 +1,39 @@
+# initialize
+./initialize
+
+# protection information is not enabled
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 0 -m 0
+nvme id-ns $FQA_DEVICE -n 1 -f | grep dps
+
+# protection information is enabled, Type 1
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 1 -d 1 -m 0
+nvme id-ns $FQA_DEVICE -n 2 -f | grep dps
+
+# protection information is enabled, Type 2
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 1 -d 2 -m 0
+nvme id-ns $FQA_DEVICE -n 3 -f | grep dps
+
+# protection information is enabled, Type 3
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 1 -d 3 -m 0
+nvme id-ns $FQA_DEVICE -n 4 -f | grep dps
+
+# protection information without metadata
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 1 -m 0
+nvme id-ns $FQA_DEVICE -n 5 -f | grep dps
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 2 -m 0
+nvme id-ns $FQA_DEVICE -n 6 -f | grep dps
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 3 -m 0
+nvme id-ns $FQA_DEVICE -n 7 -f | grep dps
+
+# metadata setting without metadata
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 0 -m 0
+nvme id-ns $FQA_DEVICE -n 8 -f | grep flbas
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 1 -m 0
+nvme id-ns $FQA_DEVICE -n 9 -f | grep flbas
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 2 -m 0
+nvme id-ns $FQA_DEVICE -n 10 -f | grep flbas
+nvme create-ns $FQA_DEVICE -s 0x1000 -c 0x1000 -f 0 -d 3 -m 0
+nvme id-ns $FQA_DEVICE -n 11 -f | grep flbas
+
+# check namespace list
+nvme list-ns $FQA_DEVICE -a

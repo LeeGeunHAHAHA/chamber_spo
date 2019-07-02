@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+source ../common > /dev/null 2>&1
+
+# commands supported and effects command
+nvme id-ctrl $FQA_DEVICE -H | grep "Command Effect"
+
+nvme effects-log $FQA_DEVICE -H
