@@ -22,7 +22,7 @@ esac
 
 echo -e "${RED}[${GREEN}SPOR Test Slot No.${PORT} (${FQA_DEVICE})${RED}]${NC}"
 
-source ../common_if
+source ../common_chamber
 source ../parser_plp.sh
 GROUP_TITLE="Sudden POR Test - Type B"
 PARAM_FILE=parameter
