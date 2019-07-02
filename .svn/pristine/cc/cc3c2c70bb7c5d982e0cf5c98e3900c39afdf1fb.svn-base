@@ -1,3 +1,0 @@
-# identify controller list
-nvme list-ctrl $FQA_DEVICE
-[   0]:0x1

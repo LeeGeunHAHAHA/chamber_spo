@@ -1,6 +1,0 @@
-# admin get log command
-
-1.effect_log                    # commands supported and effects log
-2.changed_ns_list_log           # changed namesapce list log
-3.error_log                     # error information log
-4.smart_log                     # SMART / Health Information log

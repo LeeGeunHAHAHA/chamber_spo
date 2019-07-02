@@ -1,5 +1,5 @@
 # VCS and IDE
-.svn
+.svn/*
 .idea
 
 # LOG

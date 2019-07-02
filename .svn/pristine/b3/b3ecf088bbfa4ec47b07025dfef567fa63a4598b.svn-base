@@ -1,3 +1,0 @@
-# identify controller
-rescan-ns
-nvme id-ctrl $FQA_DEVICE | grep "vid"

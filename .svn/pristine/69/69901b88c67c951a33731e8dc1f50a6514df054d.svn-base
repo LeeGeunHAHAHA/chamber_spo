@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-
-export STATIC_AMOUNT="time:1m"
-export DYNAMIC_AMOUNT="time:56s"
-
-./longrun_45m $@

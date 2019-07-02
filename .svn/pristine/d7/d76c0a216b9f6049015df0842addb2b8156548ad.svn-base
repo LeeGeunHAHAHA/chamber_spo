@@ -1,6 +1,0 @@
-# virtualization management command
-00.setup
-01.vr_alloc
-02.vr_assign
-03.online
-04.offline
