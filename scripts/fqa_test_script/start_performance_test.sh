@@ -1,7 +1,7 @@
 #!/bin/bash
 QUAL_TRUNK_DIR=~/qual/trunk
 PATH_FQA_TEST_SCRIPT=~/fqa/trunk/fqa_test_script
-PATH_GET_LOG=~/qual/trunk/simple/get_log
+PATH_GET_LOG=~/qual/trunk/simple/smart_log
 
 GREEN='\033[1;32m'
 RED='\033[1;31m'

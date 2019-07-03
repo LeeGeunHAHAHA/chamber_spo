@@ -48,7 +48,7 @@ SPO_AT_SPOR_CNT=0
 SPO_AT_SPOR_RATIO=1
 FULL_VERIFY_CYCLE=50
 PATH_FQA_TEST_SCRIPT=~/fqa/trunk/fqa_test_script
-PATH_GET_LOG=./get_log
+PATH_GET_LOG=./smart_log
 
 mkfile_time=$(date "+%Y%m%d_%H%M%S")
 filename=res/output_${FQA_DEVICE}_${mkfile_time}.csv
