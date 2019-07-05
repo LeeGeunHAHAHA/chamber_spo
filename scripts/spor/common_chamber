@@ -511,6 +511,7 @@ function power_on()
 function spo_at_spor()
 {
 	if [ $SPO_AT_SPOR_RATIO -eq 0 ]; then
+	sleep 40
     return
   fi
   
@@ -543,7 +544,7 @@ function spo_at_spor()
 #    echo "1" > /sys/bus/pci/devices/$PCI_ADDRESS/remove 
 
 		echo "wait 3s"
-		sleep 30 #3->30
+		sleep 40 #3->30
 
 		SPO_AT_SPOR_CNT=$((SPO_AT_SPOR_CNT + 1))
 	fi
